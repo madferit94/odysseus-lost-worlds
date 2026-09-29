@@ -1,6 +1,6 @@
 const FINISHER_KEYS={q:'athena',w:'achilles',e:'hermes',r:'zeus'};
-const ENERGY_MAX=150;
-function finisherCost(god){return god==='zeus'?150:100;}
+const ENERGY_MAX=200;
+function finisherCost(god){return god==='zeus'?200:100;}
 function lifeStealRate(){return stage===9?.10:.04;}
 function gainEnergy(amount){p.energy=clamp(p.energy+amount,0,ENERGY_MAX)};
 function attackBonusPercent(){return Math.max(0,Math.min(stage,9)-1)*8;}
