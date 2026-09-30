@@ -1,0 +1,14 @@
+{
+  "name": "odysseus-lost-worlds",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "db:generate": "drizzle-kit generate",
+    "test": "node test-game.cjs && node --test test-worker.mjs test-telemetry.mjs"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.31.10",
+    "drizzle-orm": "0.45.2"
+  }
+}
