@@ -1,5 +1,7 @@
 # ODYSSEUS: LOST WORLDS
 
+[한국어 프로젝트 소개](../README.md) · [English introduction](../README.en.md)
+
 트로이 전쟁을 마친 오디세우스가 고향 이타카로 돌아가는 여정을 그린 브라우저 액션 게임입니다. 방향키로 이동하며 적의 공격을 피하고, 무기와 신들의 힘을 사용해 11개 스테이지를 통과합니다. 그리스에서 시작해 낯선 동방 세계를 거쳐 이타카에 도착하는 이야기입니다.
 
 **[게임 바로 플레이하기](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site)**
