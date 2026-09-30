@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mini Tetris</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111;color:#fff;font:14px system-ui}main{text-align:center}h1{margin:0 0 8px;font-size:20px}canvas{display:block;border:2px solid #777;background:#000}p{margin:8px 0}button{padding:7px 14px;border:0;border-radius:5px;font-weight:700;cursor:pointer}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Mini Tetris</h1>
+    <canvas id="game" width="200" height="400"></canvas>
+    <p>점수 <strong id="score">0</strong> · ← → 이동 · ↑ 회전 · ↓ 내리기 · Space 즉시 낙하</p>
+    <button id="restart">다시 시작</button>
+  </main>
+  <script>
+    const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),scoreEl=document.querySelector('#score');
+    const W=10,H=20,S=20,colors=['','#35c','#fc3','#b4c','#4c6','#e44','#49c','#f83'];
+    const shapes=[[[1,1,1,1]],[[2,0,0],[2,2,2]],[[0,0,3],[3,3,3]],[[4,4],[4,4]],[[0,5,5],[5,5,0]],[[0,6,0],[6,6,6]],[[7,7,0],[0,7,7]]];
+    let board,piece,score,last,over;
+
+    function reset(){
+      board=Array.from({length:H},()=>Array(W).fill(0));score=0;last=0;over=false;scoreEl.textContent=0;spawn();
+    }
+    function spawn(){
+      const n=Math.floor(Math.random()*shapes.length);piece={m:shapes[n].map(r=>r.slice()),x:3,y:0};
+      if(hit(piece.x,piece.y,piece.m)) over=true;
+    }
+    function hit(x,y,m){
+      return m.some((row,dy)=>row.some((v,dx)=>v&&(x+dx<0||x+dx>=W||y+dy>=H||(y+dy>=0&&board[y+dy][x+dx]))));
+    }
+    function merge(){piece.m.forEach((r,y)=>r.forEach((v,x)=>{if(v)board[piece.y+y][piece.x+x]=v}));}
+    function clear(){
+      for(let y=H-1;y>=0;y--)if(board[y].every(Boolean)){board.splice(y,1);board.unshift(Array(W).fill(0));score+=100;scoreEl.textContent=score;y++;}
+    }
+    function drop(){
+      if(!hit(piece.x,piece.y+1,piece.m))piece.y++;
+      else{merge();clear();spawn();}
+    }
+    function rotate(){
+      const m=piece.m[0].map((_,i)=>piece.m.map(r=>r[i]).reverse());
+      for(const dx of [0,-1,1,-2,2])if(!hit(piece.x+dx,piece.y,m)){piece.x+=dx;piece.m=m;break;}
+    }
+    function cell(x,y,v){ctx.fillStyle=colors[v];ctx.fillRect(x*S,y*S,S,S);ctx.strokeStyle='#111';ctx.strokeRect(x*S,y*S,S,S);}
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);board.forEach((r,y)=>r.forEach((v,x)=>v&&cell(x,y,v)));
+      piece.m.forEach((r,y)=>r.forEach((v,x)=>v&&cell(piece.x+x,piece.y+y,v)));
+      if(over){ctx.fillStyle='#000b';ctx.fillRect(0,165,200,70);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 22px system-ui';ctx.fillText('게임 오버',100,207);}
+    }
+    function loop(t=0){if(!over&&t-last>500){drop();last=t}draw();requestAnimationFrame(loop);}
+    addEventListener('keydown',e=>{
+      if(over)return;if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key))e.preventDefault();
+      if(e.key==='ArrowLeft'&&!hit(piece.x-1,piece.y,piece.m))piece.x--;
+      if(e.key==='ArrowRight'&&!hit(piece.x+1,piece.y,piece.m))piece.x++;
+      if(e.key==='ArrowDown')drop();if(e.key==='ArrowUp')rotate();
+      if(e.key===' '){while(!hit(piece.x,piece.y+1,piece.m))piece.y++;drop();}
+    });
+    document.querySelector('#restart').onclick=reset;reset();requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
