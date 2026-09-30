@@ -4,7 +4,7 @@
 
 A browser action game about finding your way home from Troy to Ithaca through the trials of the gods.
 
-**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Current game version: **v15**
+**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Current game version: **v16**
 
 ## About the game
 
@@ -38,6 +38,19 @@ Designed for a computer and keyboard.
 | Esc | Pause / resume |
 
 Land before attacking, blocking, or using a finisher. There is a brief recovery period after landing.
+
+## What's new in v16 · Optional play analytics
+
+Opt in above the game before starting a new journey to record difficulty, stage progress, boss attempts, deaths, retries, finisher readiness/use and outcomes. Analytics is off by default; you can play without it. v15 gameplay balance is unchanged.
+
+- Each journey uses a new random ID. Analytics tables do not store names, emails, IP addresses or full referring URLs. Rankings and hosting access logs are separate.
+- Uncheck to stop future collection. Previously sent records remain under the retention policy.
+- Only the operator can read raw events and export CSVs. Test records are excluded by default.
+- An unknown outcome is not treated as failure. Exports cover the last 90 days; older raw records are cleaned on subsequent collection requests.
+
+[Collection definitions, limitations and operator export guide](odysseus-lost-worlds/TELEMETRY-v16.md)
+
+109 automated checks passed, and test events were verified in the live database. Browser start checks and automated combat simulations are distinguished; these are not findings from real players.
 
 ## What's new in v15
 
@@ -76,12 +89,18 @@ odysseus-lost-worlds/
   index.html              Game screen
   *.js                    Movement, combat, finishers, and UI
   assets/                 Game images
+  server/                 Rankings, page counts and play analytics
+  db/ · drizzle/          Database schema and migrations
+  test-*.cjs / test-*.mjs  Automated checks
+  TELEMETRY-v16.md         Collection and export guide
   README.md               Game folder guide
 ```
 
 Download this repository, keep its folder structure intact, and open `odysseus-lost-worlds/index.html` in a desktop browser. No npm or package installation is required to run the game screen. It uses HTML, CSS, JavaScript, and Canvas.
 
-This repository contains the browser game files. **Online rankings and visit counts rely on the separately hosted live site's server.** Opening the files locally or uploading them elsewhere does not automatically provide those services.
+This repository contains the browser game and server source. **Online rankings, page counts and play analytics require the hosted server and database.** Opening files locally or uploading them elsewhere does not automatically provide those services. Player records, CSV exports and secret credentials are not included.
+
+For development checks, use Node.js 24 or later in the game folder: `node test-game.cjs`, `node --test test-worker.mjs test-telemetry.mjs`, and `node build.mjs`. `.openai/hosting.json` identifies the existing Sites project. Deployments from another account need their own project and database setup.
 
 ## Current limitations
 
