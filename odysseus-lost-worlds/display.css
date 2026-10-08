@@ -1,0 +1,36 @@
+/* v17: enlarge presentation only; the game still draws at 960 x 540. */
+body main{max-width:none;padding:16px}
+body header{margin-bottom:12px;min-height:62px}
+body header h1{font-size:28px}
+body header .brand{display:none}
+body .header-tools{flex-direction:row;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.play-surface{position:relative}
+.play-toolbar{display:flex;justify-content:flex-end;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
+.play-toolbar button{min-height:44px;font:14px 'Malgun Gothic',system-ui,sans-serif}
+.play-toolbar button:focus-visible{outline:3px solid #a6f5ff;outline-offset:3px}
+#display-fullscreen{background:#d8b976;color:#121a25;border-color:#d8b976}
+.display-version{font-size:12px;color:#c0d1d4;margin-right:auto}
+.play-surface .play-layout{grid-template-columns:minmax(0,1fr)}
+.play-surface:not(.guide-open) .control-guide{display:none}
+.play-surface.guide-open .play-layout{grid-template-columns:minmax(0,1fr) 270px}
+.play-surface .control-guide{max-height:calc(100dvh - 32px);overflow:auto}
+.display-status{font:14px/1.5 'Malgun Gothic',system-ui,sans-serif;color:#cdeabc;margin:8px 0}
+.display-status:empty{display:none}
+.play-surface:fullscreen,.play-surface.fullscreen-fallback{width:100vw;height:100dvh;background:#090f1c;display:flex;align-items:center;justify-content:center;padding:0}
+.play-surface.fullscreen-fallback{position:fixed;inset:0;z-index:1000}
+body.display-fullscreen{overflow:hidden}
+.play-surface:fullscreen .play-layout,.play-surface.fullscreen-fallback .play-layout{display:block;width:min(100vw,177.777778dvh)}
+.play-surface:fullscreen .frame,.play-surface.fullscreen-fallback .frame{padding:0;border:0;box-shadow:none}
+.play-surface:fullscreen .hint,.play-surface.fullscreen-fallback .hint{display:none}
+.play-surface:fullscreen .play-toolbar,.play-surface.fullscreen-fallback .play-toolbar{position:absolute;right:12px;bottom:12px;z-index:4;margin:0;padding:6px;background:#0b1726ed;border:1px solid #536771}
+.play-surface:fullscreen .display-version,.play-surface.fullscreen-fallback .display-version{display:none}
+.play-surface:fullscreen .control-guide,.play-surface.fullscreen-fallback .control-guide{position:absolute;right:12px;bottom:80px;width:300px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 104px);z-index:5;top:auto}
+.play-surface:fullscreen .display-status,.play-surface.fullscreen-fallback .display-status{position:absolute;left:16px;bottom:16px;max-width:55%;z-index:4;background:#0b1726ed;padding:8px}
+@media(max-width:850px){
+ body main{padding:12px 8px}
+ .play-surface.guide-open .play-layout{grid-template-columns:1fr}
+ .play-surface .control-guide{max-height:none}
+ body .header-tools{gap:5px}
+ .play-toolbar{gap:6px}
+ .play-toolbar button{padding:8px;font-size:13px}
+}

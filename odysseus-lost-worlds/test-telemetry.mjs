@@ -12,6 +12,12 @@ function database(){
  return{sqlite,env:{DB}};
 }
 const metadata=()=>({id:crypto.randomUUID(),token:crypto.randomUUID()+crypto.randomUUID(),consent:true,version:'v16',difficulty:'ithaca',source:'x',isTest:true});
+
+test('v17 sessions preserve the version; v16 remains compatible and unknown versions are rejected',async()=>{
+ const {env,sqlite}=database();
+ for(const version of ['v16','v17']){const m={...metadata(),version};assert.equal((await api(request('/api/telemetry/start',m),env)).status,201);assert.equal(sqlite.prepare('SELECT version FROM play_sessions WHERE id=?').get(m.id).version,version);}
+ assert.equal((await api(request('/api/telemetry/start',{...metadata(),version:'v999'}),env)).status,400);
+});
 test('operator export excludes tests and secrets, flags incomplete journeys, escapes CSV',()=>{
  const now=Math.floor(Date.now()/1000),sessions=[{id:'a',started_at:now,is_test:0,token_hash:'NEVER EXPORT'},{id:'b',started_at:now,is_test:1}],events=[{session_id:'a',seq:0,received_at:now,name:'game_start',active_ms:0},{session_id:'a',seq:2,received_at:now,name:'stage_start',active_ms:1200},{session_id:'b',seq:0,received_at:now,name:'game_start'}];
  const result=prepareExport(sessions,events);assert.equal(result.sessions.length,1);assert.equal(result.sessions[0].outcome,'unknown');assert.equal(result.sessions[0].missing_sequences,'1');assert.equal(result.events.length,2);assert.ok(!JSON.stringify(result).includes('NEVER EXPORT'));assert.match(csv([{name:'=SUM(A1)'}],['name']),/'=SUM/);assert.equal(prepareExport(sessions,events,{includeTests:true}).sessions.length,2);
@@ -65,6 +71,7 @@ test('real game hooks cover bosses, retries, two-bar Zeus and game over; rejecte
  assert.equal(rows.filter(e=>e.name==='retry').length,2);assert.equal(rows.filter(e=>e.name==='game_over').length,1);
  assert.equal(rows.filter(e=>e.name==='player_death').length,3);
  assert.equal(f.sqlite.prepare('SELECT difficulty,is_test FROM play_sessions').get().is_test,1);
+ assert.equal(f.sqlite.prepare('SELECT version FROM play_sessions').get().version,'v17');
 });
 test('opt-out sends nothing; opting in mid-run waits for restart; language and stop work',async()=>{
  const f=frontend();f.run('reset();');await f.run('telemetry.flush()');assert.equal(f.requests.length,0);
