@@ -22,11 +22,11 @@ export async function telemetryApi(request,env){
   const db=env.DB;if(!db)throw Error('Missing DB');const now=Math.floor(Date.now()/1000),cutoff=now-90*86400;
   const hash=await telemetryHash(data.token);
   if(url.pathname==='/api/telemetry/start'){
-   if(data.consent!==true||data.version!=='v16'||!['ithaca','aegean','trial','wrath'].includes(data.difficulty)||!SOURCES.includes(data.source)||typeof data.isTest!=='boolean')return telemetryJson({error:'Invalid consent or metadata'},400);
+   if(data.consent!==true||!['v16','v17'].includes(data.version)||!['ithaca','aegean','trial','wrath'].includes(data.difficulty)||!SOURCES.includes(data.source)||typeof data.isTest!=='boolean')return telemetryJson({error:'Invalid consent or metadata'},400);
    await db.batch([
     db.prepare('DELETE FROM play_events WHERE received_at < ?').bind(cutoff),
     db.prepare('DELETE FROM play_sessions WHERE started_at < ?').bind(cutoff),
-    db.prepare('INSERT INTO play_sessions (id,token_hash,started_at,version,difficulty,source,is_test,consent_version) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(data.id,hash,now,'v16',data.difficulty,data.source,Number(data.isTest),'2026-09-30')
+    db.prepare('INSERT INTO play_sessions (id,token_hash,started_at,version,difficulty,source,is_test,consent_version) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(data.id,hash,now,data.version,data.difficulty,data.source,Number(data.isTest),'2026-09-30')
    ]);
    const row=await db.prepare('SELECT token_hash FROM play_sessions WHERE id=?').bind(data.id).first();
    if(row?.token_hash!==hash)return telemetryJson({error:'Journey conflict'},403);

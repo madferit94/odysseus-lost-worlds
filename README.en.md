@@ -4,7 +4,7 @@
 
 A browser action game about finding your way home from Troy to Ithaca through the trials of the gods.
 
-**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Current game version: **v16**
+**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Live game: **v16** · Repository: **v17 (not deployed)**
 
 ## About the game
 
@@ -38,6 +38,17 @@ Designed for a computer and keyboard.
 | Esc | Pause / resume |
 
 Land before attacking, blocking, or using a finisher. There is a brief recovery period after landing.
+
+## What's new in v17 · A larger playfield display
+
+- Removed the desktop width cap and made the control guide collapsible.
+- Fullscreen hides the surrounding page and fits the game to the monitor. The 16:9 aspect ratio is preserved, with letterboxing on other screen shapes.
+- Language, sound and controls remain accessible in fullscreen. Opening controls or leaving fullscreen pauses the game; close the guide and resume explicitly.
+- `Esc` closes an open guide first, then exits fullscreen. Outside fullscreen it still pauses/resumes the game.
+- Browsers that deny fullscreen use an expanded in-window view instead.
+- World boundaries, difficulty, combat balance, rankings and optional analytics are unchanged. New analytics sessions are labeled `v17` to distinguish them from earlier sessions.
+
+This change is merged into the repository only; the public link stays on v16 until a separate deployment. It responds to screen-size feedback, not a measured improvement in satisfaction or completion rate.
 
 ## What's new in v16 · Optional play analytics
 
