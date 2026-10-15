@@ -1,80 +1,80 @@
 # ODYSSEUS: LOST WORLDS
 
-**한국어** · [English](README.en.md)
+**English** · [한국어](README.ko.md)
 
-트로이에서 이타카까지, 신들의 시련을 넘어 집으로 돌아가는 브라우저 액션 게임입니다.
+A browser action game about finding your way home from Troy to Ithaca through the trials of the gods.
 
-**[게임 바로 플레이하기](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · 공개 게임 **v16** · 저장소 **v17 (배포 전)**
+**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Live game: **v16** · Repository: **v17 (not deployed)**
 
-## 게임 소개
+## About the game
 
-플레이어는 트로이 전쟁을 마친 오디세우스가 되어 고향 이타카로 향합니다. 그리스에서 낯선 동방 세계를 거치는 11개 스테이지에서 적의 공격을 피하고, 무기를 바꾸고, 신들의 힘을 빌려 싸웁니다.
+Play as Odysseus after the Trojan War and journey home to Ithaca. Across 11 stages, travel from Greece through an unfamiliar Eastern realm, dodge enemy attacks, switch weapons, and call upon divine powers.
 
-- **무기 3종:** 검, 창, 단검을 상황에 맞게 선택합니다.
-- **필살기 4종:** 아테나, 아킬레우스, 헤르메스, 제우스의 힘을 사용합니다.
-- **보스전:** 폴리페모스, 포세이돈, 조조, 안티노오스의 서로 다른 공격에 대응합니다.
-- **생존:** 목숨 3개로 시작하며, 보스전 중 무작위로 나타나는 초록색 회복 구역 안에 서 있으면 체력이 회복됩니다.
-- **점수와 순위:** 여정을 완료하면 공개 게임에서 닉네임으로 점수를 등록할 수 있습니다. 로그인은 필요하지 않습니다.
-- **난이도 4단계:** 이타카의 길(쉬움)부터 포세이돈의 분노(최상)까지 고를 수 있습니다.
-- **선택형 플레이 기록:** 동의한 경우에만 스테이지 진행·보스전·사망 기록을 익명으로 수집합니다. 기본값은 미동의입니다. [수집 안내](odysseus-lost-worlds/TELEMETRY-v16.md)
+- **Three weapons:** Choose a sword, spear, or dagger to suit the fight.
+- **Four finishers:** Call upon Athena, Achilles, Hermes, or Zeus.
+- **Boss battles:** Face the distinct attacks of Polyphemus, Poseidon, Cao Cao, and Antinous.
+- **Survival:** Start with three lives. During boss fights, green healing zones appear at random times and locations; stand inside them to recover health.
+- **Scores and rankings:** Complete the journey to submit a score under a public nickname on the live site. No login is required.
+- **Four difficulty levels:** From Ithaca's Path (easy) to Poseidon's Wrath (extreme).
+- **Optional play analytics:** Anonymous stage, boss and death records are collected only after opt-in. Off by default. [Collection guide](odysseus-lost-worlds/TELEMETRY-v16.md)
 
-컴퓨터와 키보드로 플레이하는 게임입니다.
+Designed for a computer and keyboard.
 
-## 시작하기
+## Getting started
 
-1. 위의 게임 링크를 컴퓨터 브라우저에서 엽니다.
-2. 난이도를 고른 뒤 게임을 시작합니다.
-3. 방향키로 이동하고 `A`로 공격합니다.
+1. Open the game link above in a desktop browser.
+2. Choose a difficulty and start the game.
+3. Move with the arrow keys and attack with `A`.
 
-## 조작법
+## Controls
 
-| 키 | 동작 |
+| Key | Action |
 | --- | --- |
-| 방향키 | 이동 |
-| A | 공격 |
-| S 길게 누르기 | 방패로 방어 |
-| Space | 점프 |
-| 1 / 2 / 3 | 검 / 창 / 단검 선택 |
-| Q / W / E | 아테나 / 아킬레우스 / 헤르메스 필살기 — 각각 1칸 소모 |
-| R | 제우스 필살기 — 2칸 소모 |
-| Esc | 일시정지 / 계속하기 |
+| Arrow keys | Move |
+| A | Attack |
+| Hold S | Block with your shield |
+| Space | Jump |
+| 1 / 2 / 3 | Select sword / spear / dagger |
+| Q / W / E | Athena / Achilles / Hermes finisher — 1 bar each |
+| R | Zeus finisher — 2 bars |
+| Esc | Pause / resume |
 
-공격·방어·필살기는 착지 후 사용합니다. 착지 직후에는 짧은 대기 시간이 있습니다.
+Land before attacking, blocking, or using a finisher. There is a brief recovery period after landing.
 
-버전별 변경 사항은 [CHANGELOG](CHANGELOG.md)에서 확인할 수 있습니다.
+See the [CHANGELOG](CHANGELOG.en.md) for version-by-version changes.
 
-## AI와 함께 만든 과정
+## Built with AI assistance
 
-만들고 싶은 게임과 수정할 내용을 사용자가 정하고, ChatGPT·Codex를 활용해 기획 정리, 코드 작성, 오류 확인, 기능 개선과 공개 배포를 진행한 개인 프로젝트입니다.
+This is a personal project created with ChatGPT and Codex. The creator defined the game and requested changes; AI tools helped organize the plan, write code, check errors, improve features, and publish the game.
 
-“목숨을 3개로”, “보스전 중 회복할 공간을”, “난이도를 네 단계로”처럼 플레이 중 느낀 요구를 구체적인 게임 규칙으로 바꾸며 개선했습니다. AI가 작성한 코드는 자동 검사와 브라우저 확인을 통해 점검했으며, 체감 난이도와 재미는 실제 플레이 피드백을 바탕으로 계속 다듬고 있습니다.
+Play-driven requests such as “give the player three lives,” “add a place to heal during boss fights,” and “offer four difficulty levels” became concrete game rules. AI-generated code was checked with automated tests and browser checks, while balance and enjoyment continue to be refined through actual play feedback.
 
-## 저장소 구성과 로컬 실행
+## Repository layout and local play
 
 ```text
-README.md                 한국어 소개
-README.en.md              English introduction
+README.md                 English introduction
+README.ko.md              Korean introduction (한국어 소개)
 odysseus-lost-worlds/
-  index.html              게임 화면
-  *.js                    이동·전투·필살기·화면 표시 등
-  assets/                 게임 이미지
-  server/                 순위·조회수·플레이 기록 서버
-  db/ · drizzle/          데이터 저장 구조와 변경 이력
-  test-*.cjs / test-*.mjs  자동 검사
-  TELEMETRY-v16.md         기록 수집·내보내기 안내
-  README.md               게임 폴더 안내
+  index.html              Game screen
+  *.js                    Movement, combat, finishers, and UI
+  assets/                 Game images
+  server/                 Rankings, page counts and play analytics
+  db/ · drizzle/          Database schema and migrations
+  test-*.cjs / test-*.mjs  Automated checks
+  TELEMETRY-v16.md         Collection and export guide
+  README.md               Game folder guide
 ```
 
-저장소를 내려받은 뒤 폴더 구성을 그대로 유지하고 `odysseus-lost-worlds/index.html`을 컴퓨터 브라우저에서 엽니다. 게임 화면을 실행하기 위해 npm이나 패키지를 설치할 필요는 없습니다. HTML, CSS, JavaScript와 Canvas로 동작합니다.
+Download this repository, keep its folder structure intact, and open `odysseus-lost-worlds/index.html` in a desktop browser. No npm or package installation is required to run the game screen. It uses HTML, CSS, JavaScript, and Canvas.
 
-이 저장소에는 브라우저 게임과 서버 소스가 함께 있습니다. **온라인 순위·조회수·플레이 기록은 공개 사이트의 서버와 데이터베이스가 필요한 기능**이므로, 파일을 직접 열거나 다른 곳에 업로드하는 것만으로 동일하게 제공되지는 않습니다. 실제 이용 기록·CSV·비밀 인증값은 포함하지 않습니다.
+This repository contains the browser game and server source. **Online rankings, page counts and play analytics require the hosted server and database.** Opening files locally or uploading them elsewhere does not automatically provide those services. Player records, CSV exports and secret credentials are not included.
 
-개발 검사는 Node.js 24 이상에서 게임 폴더로 이동하여 `node test-game.cjs`, `node --test test-worker.mjs test-telemetry.mjs`, `node build.mjs`로 실행합니다. `.openai/hosting.json`은 기존 Sites 프로젝트의 연결 식별자입니다. 다른 계정에서 배포하려면 자신의 프로젝트와 데이터베이스 연결을 별도로 준비해야 합니다.
+For development checks, use Node.js 24 or later in the game folder: `node test-game.cjs`, `node --test test-worker.mjs test-telemetry.mjs`, and `node build.mjs`. `.openai/hosting.json` identifies the existing Sites project. Deployments from another account need their own project and database setup.
 
-## 현재 알아둘 점
+## Current limitations
 
-- 온라인 순위표는 아직 난이도별로 나뉘지 않습니다.
-- 모바일 터치 조작은 지원하지 않습니다. 컴퓨터 키보드 사용을 권장합니다.
-- GitHub 파일 업데이트와 공개 게임 업데이트는 별도 작업입니다.
+- All difficulty levels currently share one online leaderboard.
+- Mobile touch controls are not supported; a computer keyboard is recommended.
+- Updating the GitHub files and updating the live game are separate operations.
 
-게임을 처음 확인하신다면 **이타카의 길**부터 시작해 보세요.
+For your first journey, try **Ithaca's Path**.
