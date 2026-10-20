@@ -41,7 +41,7 @@ Designed for a computer and keyboard.
 
 Land before attacking, blocking, or using a finisher. There is a brief recovery period after landing.
 
-See the [CHANGELOG](CHANGELOG.en.md) for version-by-version changes.
+See the [CHANGELOG](CHANGELOG.md) for version-by-version changes.
 
 ## Built with AI assistance
 
