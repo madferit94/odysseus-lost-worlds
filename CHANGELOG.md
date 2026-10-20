@@ -13,6 +13,18 @@
 
 This change is merged into the repository only; the public link stays on v16 until a separate deployment. It responds to screen-size feedback, not a measured improvement in satisfaction or completion rate.
 
+## v17 (repository only, not deployed) · Additional fixes
+
+- Keyboard: when a link, button, form field or a fold-out section such as "How the ranking works" has focus, Enter and Space act on that item instead of starting a game. Arrow keys and Space scroll the page unless a game is running or the game screen has focus. Controls during play are unchanged.
+- Narrow screens (under 620px wide): the title and pause panel now sits below the game screen instead of covering the buttons and text around it.
+- Accessibility: with the system "reduce motion" setting, the screen no longer shakes and white flashes are softer. The game screen shows an outline when it has keyboard focus.
+- Server: a ranking submission whose body is not a proper record (for example `null`) now gets a "could not be read" error instead of "temporarily unavailable".
+- The page no longer asks for a missing site icon (favicon) on every visit.
+- Documents: the changelog, game folder guide and analytics guide now follow one naming rule (`X.md` English, `X.ko.md` Korean), and broken links were fixed.
+- 7 automated checks were added for these fixes and for the v17 fullscreen controls. Difficulty, combat numbers, rankings and analytics events are unchanged.
+
+These fixes are in the repository only. The public game stays on v16 until a separate deployment.
+
 ## What's new in v16 · Optional play analytics
 
 Opt in above the game before starting a new journey to record difficulty, stage progress, boss attempts, deaths, retries, finisher readiness/use and outcomes. Analytics is off by default; you can play without it. v15 gameplay balance is unchanged.
