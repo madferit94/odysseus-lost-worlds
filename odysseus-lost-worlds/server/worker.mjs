@@ -49,6 +49,7 @@ async function apiWithViewer(request,env,viewerKey){
   }
   if(path==='/api/results'&&request.method==='POST'){
    let r;try{r=await body(request);}catch{return json({error:'The result could not be read.'},400);}
+   if(!r||typeof r!=='object'||Array.isArray(r))return json({error:'The result could not be read.'},400);
    if(typeof r.runId!=='string'||!/^[-a-z0-9]{36}$/.test(r.runId)||typeof r.nickname!=='string')return json({error:'Start a new journey before submitting.'},400);
    const nickname=r.nickname.trim();if(!/^[\p{L}\p{N} _.-]{1,16}$/u.test(nickname))return json({error:'Use 1–16 letters, numbers, spaces, dots, dashes or underscores.'},400);
    const run=await db.prepare('SELECT * FROM runs WHERE id=?').bind(r.runId).first();

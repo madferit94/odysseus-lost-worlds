@@ -25,6 +25,14 @@ test('reject invalid results, names and cross-origin changes',async()=>{
  const runId=await start();for(const delta of [{elapsed:1},{normalKills:999},{damageTaken:-1},{bossKills:3},{nickname:'<script>'},{elapsed:10000},{completed:false}])assert.equal((await api(request('/api/results',{...result,runId,...delta}),env)).status,400);
  const req=new Request('https://game.example/api/runs',{method:'POST',headers:{origin:'https://evil.example'}});assert.equal((await api(req,env)).status,403);
 });
+test('results with a JSON body that is not an object are rejected as unreadable, not as an outage',async()=>{
+ const before=sqlite.prepare('SELECT count(*) n FROM runs WHERE submitted_at IS NOT NULL').get().n;
+ for(const raw of ['null','42','"text"','true','[]']){
+  const res=await api(new Request('https://game.example/api/results',{method:'POST',headers:{'content-type':'application/json','origin':'https://game.example'},body:raw}),env);
+  assert.equal(res.status,400,raw);assert.ok((await res.json()).error,raw);
+ }
+ assert.equal(sqlite.prepare('SELECT count(*) n FROM runs WHERE submitted_at IS NOT NULL').get().n,before);
+});
 test('ranking orders by score and accepts Unicode nicknames',async()=>{
  const runId=await start();assert.equal((await api(request('/api/results',{...result,runId,nickname:'오디세우스',retries:0}),env)).status,200);
  const data=await (await api(request('/api/leaderboard'),env)).json();assert.equal(data.entries[0].nickname,'오디세우스');assert.equal(data.entries[0].score,30500);
