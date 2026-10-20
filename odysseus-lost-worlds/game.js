@@ -105,7 +105,12 @@ function update(dt){if(state!=='play')return;time+=dt;stageTime+=dt;melody(dt);s
 }
 document.getElementById('start').onclick=()=>state==='pause'?pause():state==='dead'?retry():reset();
 document.getElementById('sound').onclick=()=>{muted=!muted;refreshSoundLabel();if(!muted)audio();canvas.focus();};
-window.addEventListener('keydown',e=>{if(['INPUT','TEXTAREA','SELECT','BUTTON'].includes(e.target?.tagName)||e.ctrlKey||e.altKey||e.metaKey)return;const key=inputKey(e);if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','q','w','e','r','s','1','2','3','a','Escape','Enter',' '].includes(key))e.preventDefault();keys.add(key);if(e.repeat)return;if(['1','2','3'].includes(key))switchWeapon(Number(key));if(key==='Escape')pause();if(key==='Enter'&&['title','dead','gameover','end'].includes(state))state==='dead'?retry():reset();if(key==='a')slash();if(key===' ')jump();if(FINISHER_KEYS[key])finisher(FINISHER_KEYS[key]);});
+// Page controls (form fields, buttons, links, <summary>, editable text) keep their own keys.
+const PAGE_CONTROLS='input,textarea,select,button,summary,a,[contenteditable]';
+function pageControlTarget(t){if(!t)return false;if(typeof t.closest==='function')return !!t.closest(PAGE_CONTROLS);return ['INPUT','TEXTAREA','SELECT','BUTTON','SUMMARY','A'].includes(t.tagName)||t.isContentEditable===true;}
+// Arrows and Space scroll the page unless a game is running or the canvas has focus.
+function gameOwnsScrollKeys(e){return state==='play'||e.target===canvas||document.activeElement===canvas;}
+window.addEventListener('keydown',e=>{if(pageControlTarget(e.target)||e.ctrlKey||e.altKey||e.metaKey)return;const key=inputKey(e);if(['q','w','e','r','s','1','2','3','a','Escape','Enter'].includes(key)||(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(key)&&gameOwnsScrollKeys(e)))e.preventDefault();keys.add(key);if(e.repeat)return;if(['1','2','3'].includes(key))switchWeapon(Number(key));if(key==='Escape')pause();if(key==='Enter'&&['title','dead','gameover','end'].includes(state))state==='dead'?retry():reset();if(key==='a')slash();if(key===' ')jump();if(FINISHER_KEYS[key])finisher(FINISHER_KEYS[key]);});
 window.addEventListener('keyup',e=>keys.delete(inputKey(e)));window.addEventListener('blur',()=>{keys.clear();if(state==='play')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='play')pause();});
 
 function mountain(x,y,w,h,c){poly([[x,y],[x+w*.4,y-h],[x+w*.64,y-h*.7],[x+w,y]],c);}
