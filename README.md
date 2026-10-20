@@ -41,7 +41,7 @@ Designed for a computer and keyboard.
 
 Land before attacking, blocking, or using a finisher. There is a brief recovery period after landing.
 
-See the [CHANGELOG](CHANGELOG.en.md) for version-by-version changes.
+See the [CHANGELOG](CHANGELOG.md) for version-by-version changes.
 
 ## Built with AI assistance
 
@@ -61,8 +61,8 @@ odysseus-lost-worlds/
   server/                 Rankings, page counts and play analytics
   db/ · drizzle/          Database schema and migrations
   test-*.cjs / test-*.mjs  Automated checks
-  TELEMETRY-v16.md         Collection and export guide
-  README.md               Game folder guide
+  TELEMETRY-v16.md         Collection and export guide (TELEMETRY-v16.ko.md: Korean)
+  README.md               Game folder guide (README.ko.md: Korean)
 ```
 
 Download this repository, keep its folder structure intact, and open `odysseus-lost-worlds/index.html` in a desktop browser. No npm or package installation is required to run the game screen. It uses HTML, CSS, JavaScript, and Canvas.

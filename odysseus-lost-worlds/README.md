@@ -1,66 +1,50 @@
-# ODYSSEUS: LOST WORLDS
+# ODYSSEUS: LOST WORLDS · Game folder
 
-[한국어 프로젝트 소개](../README.md) · [English introduction](../README.en.md)
+**English** · [한국어](README.ko.md)
 
-트로이 전쟁을 마친 오디세우스가 고향 이타카로 돌아가는 여정을 그린 브라우저 액션 게임입니다. 방향키로 이동하며 적의 공격을 피하고, 무기와 신들의 힘을 사용해 11개 스테이지를 통과합니다. 그리스에서 시작해 낯선 동방 세계를 거쳐 이타카에 도착하는 이야기입니다.
+[Project introduction](../README.md) · [Changelog](../CHANGELOG.md)
 
-**[게임 바로 플레이하기](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site)**
+A browser action game about Odysseus going home to Ithaca after the Trojan War. Move with the arrow keys, dodge enemy attacks, and use weapons and the powers of the gods to clear 11 stages. The story starts in Greece, passes through an unfamiliar Eastern realm, and ends in Ithaca.
 
-## 어떤 게임인가요?
+**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Live game: **v16** · This folder: **v17 (not deployed)**
 
-- 일반 적을 물리치고 길을 열어 다음 스테이지로 진행합니다.
-- 폴리페모스, 포세이돈, 조조, 안티노오스와 보스전을 치릅니다. 보스마다 공격 방식이 다릅니다.
-- 검·창·단검 중 무기를 바꿔 사용할 수 있고, 에너지가 모이면 신들의 필살기를 쓸 수 있습니다.
-- 체력과 목숨을 관리하며 점수를 쌓습니다. 여정을 끝내면 공개 게임에서 순위를 남길 수 있습니다.
+## What kind of game is it?
 
-## 조작법
+- Defeat regular enemies to open the way to the next stage.
+- Fight Polyphemus, Poseidon, Cao Cao and Antinous. Each boss attacks in its own way.
+- Switch between sword, spear and dagger, and use the gods' finishers when your energy is charged.
+- Look after your health and lives while you build your score. Finish the journey to save your result on the live game's leaderboard.
+- Choose one of four difficulty levels before you start. All difficulties currently share one leaderboard.
 
-| 키 | 동작 |
+## Controls
+
+| Key | Action |
 | --- | --- |
-| 방향키 | 이동 |
-| A | 공격 |
-| S | 방어 |
-| Space | 점프 |
-| 1 / 2 / 3 | 검 / 창 / 단검 선택 |
-| Q / W / E / R | 아테나 / 아킬레우스 / 헤르메스 / 제우스 필살기 |
-| Esc | 일시정지 또는 계속하기 |
+| Arrow keys | Move |
+| A | Attack |
+| Hold S | Block with your shield |
+| Space | Jump |
+| 1 / 2 / 3 | Select sword / spear / dagger |
+| Q / W / E | Athena / Achilles / Hermes finisher — 1 bar each |
+| R | Zeus finisher — 2 bars |
+| Esc | Pause / resume |
 
-## 저장소 버전: v17 · 공개 사이트: v16 (별도 배포 전)
+## Versions
 
-전체 화면 확대, 접을 수 있는 조작 안내, 전체 화면 내 한영·음향 버튼을 추가했습니다. 안내를 열거나 전체 화면을 나가면 일시정지합니다. 화면의 16:9 비율과 게임 속 이동 범위·전투 수치는 그대로입니다. 새 분석 기록은 v17로 구분하며 서버는 기존 v16 기록 요청도 호환합니다.
+Changes for each version (v13 to v17) are in the [CHANGELOG](../CHANGELOG.md). The live site still runs v16 until v17 is deployed separately.
 
-## v16 선택형 플레이 기록
+Optional play analytics was added in v16. Detailed play events are recorded only if the player opts in before starting a game, and the game can be played without it. See the [collection guide and operator CSV steps](TELEMETRY-v16.md). Real records and secret values are not in this repository.
 
-선택형 플레이 기록 수집을 추가했습니다. 게임 시작 전에 동의한 경우에만 상세 행동을 기록하며, 동의하지 않아도 플레이할 수 있습니다. 기존 전투 수치는 바꾸지 않았습니다. [한영 수집 안내와 운영자 CSV 절차](TELEMETRY-v16.md)를 참고하세요. 실제 원본 기록과 비밀값은 저장소에 포함하지 않습니다.
+## Running and files
 
-## v15부터 유지되는 게임 규칙
+You can play right away at the live game address above. If you downloaded this folder, you can also open `index.html` in a browser to see the game screen.
 
-v15에서는 시작 전에 4가지 여정 난이도를 고를 수 있습니다. 기본값인 **에게해의 항해(보통)**는 v14와 같은 전투 수치를 사용합니다.
+- `index.html`: game screen and controls guide
+- `*.js`: game behaviour such as movement, combat and display
+- `assets/`: images used in the game
+- `server/`, `db/`, `drizzle/`: server source and database structure
+- `test-game.cjs`, `test-*.mjs`: automated checks
 
-| 난이도 | 일반 적 체력·공격력 | 보스 체력·공격력 |
-| --- | --- | --- |
-| 이타카의 길 · 쉬움 | 85% · 85% | 85% · 85% |
-| 에게해의 항해 · 보통 | 100% · 100% | 100% · 100% |
-| 신들의 시련 · 어려움 | 115% · 115% | 120% · 115% |
-| 포세이돈의 분노 · 최상 | 130% · 130% | 135% · 130% |
+Online rankings, page views and play analytics are connected to the live game's server and database. They do not work when you open `index.html` directly as a file.
 
-위 비율은 v14 대비입니다. 체력과 피해량은 정수로 반올림합니다. 게임 도중 난이도를 바꿀 수는 없으며, 새 게임을 시작할 때 적용됩니다.
-
-필살기 에너지는 이제 **최대 2칸**까지 모을 수 있습니다. Q·W·E는 1칸, R 제우스는 2칸을 채워야 사용할 수 있습니다. 현재 온라인 순위표는 난이도별로 나뉘지 않습니다.
-
-v14에서 적용한 보스 체력·공격력 약 5% 하향 조정도 유지됩니다.
-
-이전 v13에서 추가한 기능도 포함합니다.
-
-- 새 게임은 목숨 3개로 시작합니다. 쓰러져도 목숨이 남아 있으면 같은 전투에서 다시 도전할 수 있습니다.
-- 보스전 중 초록색 힐 존이 무작위 시간과 위치에 나타납니다. 힐 존 안에 서 있으면 체력이 회복됩니다.
-
-## 실행과 파일 구성
-
-위의 공개 게임 주소에서 바로 플레이할 수 있습니다. 이 폴더를 내려받았다면 `index.html`을 브라우저에서 열어 게임 화면을 볼 수도 있습니다.
-
-- `index.html`: 게임 화면과 조작 안내
-- `*.js`: 이동, 전투, 화면 표시 등 게임 동작
-- `assets/`: 게임에 쓰이는 이미지
-
-온라인 순위·조회수·플레이 기록은 공개 게임 주소의 서버와 데이터베이스에 연결된 기능입니다. `index.html`을 파일로 직접 열면 이 기능들은 제공되지 않습니다. `server/`와 `db/`, `drizzle/`는 서버 소스와 저장 구조이며, `test-game.cjs`와 `test-*.mjs`는 자동 검사입니다.
+To run the checks, use Node.js 24 or later in this folder: `npm test` and `node build.mjs`.
