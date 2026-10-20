@@ -54,6 +54,8 @@ Play-driven requests such as “give the player three lives,” “add a place t
 ```text
 README.md                 English introduction
 README.ko.md              Korean introduction (한국어 소개)
+CHANGELOG.md              Changelog (English)
+CHANGELOG.ko.md           Changelog (한국어)
 odysseus-lost-worlds/
   index.html              Game screen
   *.js                    Movement, combat, finishers, and UI
@@ -61,15 +63,17 @@ odysseus-lost-worlds/
   server/                 Rankings, page counts and play analytics
   db/ · drizzle/          Database schema and migrations
   test-*.cjs / test-*.mjs  Automated checks
-  TELEMETRY-v16.md         Collection and export guide
-  README.md               Game folder guide
+  TELEMETRY-v16.md         Collection and export guide (English)
+  TELEMETRY-v16.ko.md      Collection and export guide (한국어)
+  README.md               Game folder guide (English)
+  README.ko.md            Game folder guide (한국어)
 ```
 
 Download this repository, keep its folder structure intact, and open `odysseus-lost-worlds/index.html` in a desktop browser. No npm or package installation is required to run the game screen. It uses HTML, CSS, JavaScript, and Canvas.
 
 This repository contains the browser game and server source. **Online rankings, page counts and play analytics require the hosted server and database.** Opening files locally or uploading them elsewhere does not automatically provide those services. Player records, CSV exports and secret credentials are not included.
 
-For development checks, use Node.js 24 or later in the game folder: `node test-game.cjs`, `node --test test-worker.mjs test-telemetry.mjs`, and `node build.mjs`. `.openai/hosting.json` identifies the existing Sites project. Deployments from another account need their own project and database setup.
+For development checks, use Node.js 24 or later in the game folder: `npm test` (game, display, server and analytics checks; no install needed) and `node build.mjs`. `.openai/hosting.json` identifies the existing Sites project. Deployments from another account need their own project and database setup.
 
 ## Current limitations
 

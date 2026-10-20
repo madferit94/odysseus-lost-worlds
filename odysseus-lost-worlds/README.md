@@ -1,66 +1,44 @@
-# ODYSSEUS: LOST WORLDS
+# Game folder guide
 
-[한국어 프로젝트 소개](../README.md) · [English introduction](../README.en.md)
+**English** · [한국어](README.ko.md)
 
-트로이 전쟁을 마친 오디세우스가 고향 이타카로 돌아가는 여정을 그린 브라우저 액션 게임입니다. 방향키로 이동하며 적의 공격을 피하고, 무기와 신들의 힘을 사용해 11개 스테이지를 통과합니다. 그리스에서 시작해 낯선 동방 세계를 거쳐 이타카에 도착하는 이야기입니다.
+This folder holds the browser game and its server code. For what the game is and how to play it, see the [project introduction](../README.md). Version-by-version changes are in the [CHANGELOG](../CHANGELOG.md).
 
-**[게임 바로 플레이하기](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site)**
+## What is in this folder
 
-## 어떤 게임인가요?
-
-- 일반 적을 물리치고 길을 열어 다음 스테이지로 진행합니다.
-- 폴리페모스, 포세이돈, 조조, 안티노오스와 보스전을 치릅니다. 보스마다 공격 방식이 다릅니다.
-- 검·창·단검 중 무기를 바꿔 사용할 수 있고, 에너지가 모이면 신들의 필살기를 쓸 수 있습니다.
-- 체력과 목숨을 관리하며 점수를 쌓습니다. 여정을 끝내면 공개 게임에서 순위를 남길 수 있습니다.
-
-## 조작법
-
-| 키 | 동작 |
+| Path | What it does |
 | --- | --- |
-| 방향키 | 이동 |
-| A | 공격 |
-| S | 방어 |
-| Space | 점프 |
-| 1 / 2 / 3 | 검 / 창 / 단검 선택 |
-| Q / W / E / R | 아테나 / 아킬레우스 / 헤르메스 / 제우스 필살기 |
-| Esc | 일시정지 또는 계속하기 |
+| `index.html`, `display.css` | Game page and its layout |
+| `game.js` and the other `*.js` files | Movement, combat, bosses, finishers, screen display, rankings, page views and optional play analytics |
+| `display.js` | v17 toolbar: fullscreen, collapsible controls guide, language and sound buttons |
+| `assets/` | Game images |
+| `server/worker.mjs` | Server for online rankings and page views |
+| `server/telemetry.mjs` | Server for optional play analytics |
+| `db/`, `drizzle/` | Database tables and their change history |
+| `export-analytics.mjs` | Operator-only tool that turns an analytics snapshot into CSV files |
+| `test-game.cjs`, `test-*.mjs` | Automated checks |
+| `build.mjs` | Packs the game and server into `dist/` for deployment |
+| `TELEMETRY-v16.md` | What optional play analytics collects and how the operator exports it |
 
-## 저장소 버전: v17 · 공개 사이트: v16 (별도 배포 전)
+## Playing locally
 
-전체 화면 확대, 접을 수 있는 조작 안내, 전체 화면 내 한영·음향 버튼을 추가했습니다. 안내를 열거나 전체 화면을 나가면 일시정지합니다. 화면의 16:9 비율과 게임 속 이동 범위·전투 수치는 그대로입니다. 새 분석 기록은 v17로 구분하며 서버는 기존 v16 기록 요청도 호환합니다.
+Open `index.html` in a desktop browser. No installation is needed to see and play the game.
 
-## v16 선택형 플레이 기록
+**Online rankings, page views and play analytics need the hosted server and its database.** When you open the file directly or put it on another web host, the game still runs, but those features cannot load or save anything.
 
-선택형 플레이 기록 수집을 추가했습니다. 게임 시작 전에 동의한 경우에만 상세 행동을 기록하며, 동의하지 않아도 플레이할 수 있습니다. 기존 전투 수치는 바꾸지 않았습니다. [한영 수집 안내와 운영자 CSV 절차](TELEMETRY-v16.md)를 참고하세요. 실제 원본 기록과 비밀값은 저장소에 포함하지 않습니다.
+## Checks and build
 
-## v15부터 유지되는 게임 규칙
+Use Node.js 24 or later inside this folder.
 
-v15에서는 시작 전에 4가지 여정 난이도를 고를 수 있습니다. 기본값인 **에게해의 항해(보통)**는 v14와 같은 전투 수치를 사용합니다.
+```sh
+npm test          # game, display, server and analytics checks
+node build.mjs    # writes the deployable game and server to dist/
+```
 
-| 난이도 | 일반 적 체력·공격력 | 보스 체력·공격력 |
-| --- | --- | --- |
-| 이타카의 길 · 쉬움 | 85% · 85% | 85% · 85% |
-| 에게해의 항해 · 보통 | 100% · 100% | 100% · 100% |
-| 신들의 시련 · 어려움 | 115% · 115% | 120% · 115% |
-| 포세이돈의 분노 · 최상 | 130% · 130% | 135% · 130% |
+`npm test` does not need `npm install`. `dist/` is a build output and is not stored in Git. `node build.mjs` reads `.openai/hosting.json`, which points to the existing hosted project; deploying from another account needs its own project and database.
 
-위 비율은 v14 대비입니다. 체력과 피해량은 정수로 반올림합니다. 게임 도중 난이도를 바꿀 수는 없으며, 새 게임을 시작할 때 적용됩니다.
+## More documents
 
-필살기 에너지는 이제 **최대 2칸**까지 모을 수 있습니다. Q·W·E는 1칸, R 제우스는 2칸을 채워야 사용할 수 있습니다. 현재 온라인 순위표는 난이도별로 나뉘지 않습니다.
-
-v14에서 적용한 보스 체력·공격력 약 5% 하향 조정도 유지됩니다.
-
-이전 v13에서 추가한 기능도 포함합니다.
-
-- 새 게임은 목숨 3개로 시작합니다. 쓰러져도 목숨이 남아 있으면 같은 전투에서 다시 도전할 수 있습니다.
-- 보스전 중 초록색 힐 존이 무작위 시간과 위치에 나타납니다. 힐 존 안에 서 있으면 체력이 회복됩니다.
-
-## 실행과 파일 구성
-
-위의 공개 게임 주소에서 바로 플레이할 수 있습니다. 이 폴더를 내려받았다면 `index.html`을 브라우저에서 열어 게임 화면을 볼 수도 있습니다.
-
-- `index.html`: 게임 화면과 조작 안내
-- `*.js`: 이동, 전투, 화면 표시 등 게임 동작
-- `assets/`: 게임에 쓰이는 이미지
-
-온라인 순위·조회수·플레이 기록은 공개 게임 주소의 서버와 데이터베이스에 연결된 기능입니다. `index.html`을 파일로 직접 열면 이 기능들은 제공되지 않습니다. `server/`와 `db/`, `drizzle/`는 서버 소스와 저장 구조이며, `test-game.cjs`와 `test-*.mjs`는 자동 검사입니다.
+- [Project introduction (English)](../README.md) · [프로젝트 소개 (한국어)](../README.ko.md)
+- [CHANGELOG (English)](../CHANGELOG.md) · [업데이트 내역 (한국어)](../CHANGELOG.ko.md)
+- [Play analytics guide (English)](TELEMETRY-v16.md) · [플레이 기록 안내 (한국어)](TELEMETRY-v16.ko.md)
