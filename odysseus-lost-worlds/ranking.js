@@ -1,7 +1,7 @@
 let rankRunId=null,rankPending=null,rankGeneration=0,rankStarting=null,rankIdentityReady=Promise.resolve();
 const rankStatus=document.getElementById('rank-status'),rankSave=document.getElementById('rank-save'),rankForm=document.getElementById('rank-form');
 async function rankRequest(path,body){
- const response=await fetch(path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{});
+ let response;try{response=await fetch(path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{});}catch{throw Error('Online rankings are unavailable. Please try again.');}
  let data;try{data=await response.json();}catch{throw Error('Online rankings are unavailable. Please try again.');}
  if(!response.ok)throw Error(data.error||'Could not connect to rankings.');return data;
 }

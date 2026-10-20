@@ -52,10 +52,16 @@ test('90-day cleanup removes expired analytics only, not rankings or page views'
  await api(request('/api/telemetry/start',metadata()),env);
  assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM play_sessions').get().n,1);assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM play_events').get().n,0);assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM page_views').get().n,1);
 });
+test('cleanup removes an expired journey even when its events arrived later; new opt-ins still start',async()=>{
+ const {env,sqlite}=database(),m=metadata();await api(request('/api/telemetry/start',m),env);await api(request('/api/telemetry/events',{...m,events:[event()]}),env);
+ const now=Math.floor(Date.now()/1000);sqlite.prepare('UPDATE play_sessions SET started_at=?').run(now-91*86400);sqlite.prepare('UPDATE play_events SET received_at=?').run(now-89*86400);
+ const fresh=metadata();assert.equal((await api(request('/api/telemetry/start',fresh),env)).status,201);
+ assert.deepEqual(sqlite.prepare('SELECT id FROM play_sessions').all().map(r=>r.id),[fresh.id]);assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM play_events').get().n,0);
+});
 function frontend(){
  const {env,sqlite}=database(),elements=new Map(),handlers={},noop=()=>{},draw=new Proxy({},{get:()=>noop,set:()=>true});let loseResponse=false,offline=false;
  const el=id=>{if(!elements.has(id))elements.set(id,{checked:false,events:{},textContent:'',getContext:()=>draw,classList:{add:noop,remove:noop},focus:noop,setAttribute:noop,before:noop,addEventListener(k,f){this.events[k]=f;}});return elements.get(id);};
- const requests=[];const ctx=vm.createContext({console,crypto,Math,URLSearchParams,AbortController,location:{search:'?test=1&utm_source=x'},setTimeout:()=>1,clearTimeout:noop,Image:class{},requestAnimationFrame:noop,document:{hidden:false,createElement:()=>el('panel'),querySelector:()=>el('layout'),getElementById:el,addEventListener(k,f){handlers[k]=f;}},window:{addEventListener(k,f){handlers[k]=f;}},fetch:async(path,opts)=>{
+ const requests=[];const ctx=vm.createContext({console,crypto,Math,URLSearchParams,AbortController,location:{search:'?test=1&utm_source=x'},setTimeout:()=>1,clearTimeout:noop,Image:class{},requestAnimationFrame:noop,document:{documentElement:{lang:'en'},hidden:false,createElement:()=>el('panel'),querySelector:()=>el('layout'),getElementById:el,addEventListener(k,f){handlers[k]=f;}},window:{addEventListener(k,f){handlers[k]=f;}},fetch:async(path,opts)=>{
   requests.push(path);if(offline)throw Error('offline');const response=await api(new Request('https://game.example'+path,{...opts,headers:{...opts.headers,origin:'https://game.example'}}),env);if(loseResponse&&path.endsWith('/events')){loseResponse=false;throw Error('response lost');}return response;
  }});
  for(const f of ['art.js','gods.js','achilles.js','caocao.js','weapons.js','progression.js','combat.js','characters.js','ui.js','game.js','telemetry.js','telemetry-hooks.js'])vm.runInContext(fs.readFileSync(''+f,'utf8'),ctx);

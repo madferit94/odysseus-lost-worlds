@@ -21,7 +21,7 @@ function refreshControlLanguage(){
  refreshSoundLabel();refreshDifficultyLabels();if(typeof refreshViewsLabel==='function')refreshViewsLabel();
 }
 function setControlLanguage(language){
- controlLanguage=language==='ko'?'ko':'en';const ko=controlLanguage==='ko';
+ controlLanguage=language==='ko'?'ko':'en';const ko=controlLanguage==='ko';document.documentElement.lang=controlLanguage;
  document.getElementById('guide-ko').hidden=!ko;document.getElementById('guide-en').hidden=ko;
  for(const id of ['en','ko'])document.getElementById('lang-'+id).setAttribute('aria-pressed',String(id===controlLanguage));
  refreshControlLanguage();

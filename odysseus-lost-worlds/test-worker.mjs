@@ -25,6 +25,9 @@ test('reject invalid results, names and cross-origin changes',async()=>{
  const runId=await start();for(const delta of [{elapsed:1},{normalKills:999},{damageTaken:-1},{bossKills:3},{nickname:'<script>'},{elapsed:10000},{completed:false}])assert.equal((await api(request('/api/results',{...result,runId,...delta}),env)).status,400);
  const req=new Request('https://game.example/api/runs',{method:'POST',headers:{origin:'https://evil.example'}});assert.equal((await api(req,env)).status,403);
 });
+test('a JSON null result body is rejected as invalid, not as an outage',async()=>{
+ const response=await api(new Request('https://game.example/api/results',{method:'POST',headers:{'content-type':'application/json',origin:'https://game.example'},body:'null'}),env);assert.equal(response.status,400);assert.match((await response.json()).error,/Start a new journey/);
+});
 test('ranking orders by score and accepts Unicode nicknames',async()=>{
  const runId=await start();assert.equal((await api(request('/api/results',{...result,runId,nickname:'오디세우스',retries:0}),env)).status,200);
  const data=await (await api(request('/api/leaderboard'),env)).json();assert.equal(data.entries[0].nickname,'오디세우스');assert.equal(data.entries[0].score,30500);
@@ -32,11 +35,13 @@ test('ranking orders by score and accepts Unicode nicknames',async()=>{
 test('frontend starts, saves, displays actual results and recovers network failures',async()=>{
  const els=new Map();const element=id=>{if(!els.has(id))els.set(id,{textContent:'',value:'Browser Hero',hidden:false,disabled:false,children:[],events:{},addEventListener(k,f){this.events[k]=f;},appendChild(v){this.children.push(v);},replaceChildren(){this.children=[];}});return els.get(id);};
  let offline=false;
- const ctx=vm.createContext({console,document:{getElementById:element,createElement:()=>({children:[],textContent:'',appendChild(v){this.children.push(v);}})},fetch:async(path,opts)=>{if(offline)throw Error('Offline');return api(new Request('https://game.example'+path,opts),env);}});
+ const ctx=vm.createContext({console,document:{getElementById:element,createElement:()=>({children:[],textContent:'',appendChild(v){this.children.push(v);}})},fetch:async(path,opts)=>{if(offline)throw new TypeError('Failed to fetch');return api(new Request('https://game.example'+path,opts),env);}});
  vm.runInContext(fs.readFileSync('ranking.js','utf8'),ctx);await vm.runInContext('startRankRun();rankStarting',ctx);
  const runId=vm.runInContext('rankRunId',ctx);sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(Math.floor(Date.now()/1000)-1000,runId);
  await vm.runInContext('finishRankRun('+JSON.stringify(result)+')',ctx);assert.equal(element('rank-form').hidden,false);
  offline=true;await element('rank-form').events.submit({preventDefault(){}});assert.equal(element('rank-save').disabled,false);assert.equal(element('rank-form').hidden,false);
+ assert.equal(element('rank-status').textContent,'Online rankings are unavailable. Please try again.');
+ await vm.runInContext('loadRanking()',ctx);assert.equal(element('rank-load').textContent,'Online rankings are unavailable. Please try again.');
  offline=false;await element('rank-form').events.submit({preventDefault(){}});assert.equal(element('rank-form').hidden,true);assert.match(element('rank-status').textContent,/30,000/);assert.ok(element('rank-rows').children.length>=3);
  assert.ok(element('rank-rows').children.some(row=>row.children[1].textContent==='Browser Hero (ME)'));
 });

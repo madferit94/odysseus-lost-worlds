@@ -24,7 +24,7 @@ export async function telemetryApi(request,env){
   if(url.pathname==='/api/telemetry/start'){
    if(data.consent!==true||!['v16','v17'].includes(data.version)||!['ithaca','aegean','trial','wrath'].includes(data.difficulty)||!SOURCES.includes(data.source)||typeof data.isTest!=='boolean')return telemetryJson({error:'Invalid consent or metadata'},400);
    await db.batch([
-    db.prepare('DELETE FROM play_events WHERE received_at < ?').bind(cutoff),
+    db.prepare('DELETE FROM play_events WHERE received_at < ? OR session_id IN (SELECT id FROM play_sessions WHERE started_at < ?)').bind(cutoff,cutoff),
     db.prepare('DELETE FROM play_sessions WHERE started_at < ?').bind(cutoff),
     db.prepare('INSERT INTO play_sessions (id,token_hash,started_at,version,difficulty,source,is_test,consent_version) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(data.id,hash,now,data.version,data.difficulty,data.source,Number(data.isTest),'2026-09-30')
    ]);
