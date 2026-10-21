@@ -107,6 +107,7 @@ test('unavailable view storage returns an error instead of a fabricated count',a
 });
 
 // ---- Ranking protection ------------------------------------------------------
+import {MIN_PLAUSIBLE_ELAPSED_SECONDS,CLOCK_TOLERANCE_SECONDS,checkPlausibility} from './server/protection.mjs';
 import {checkNickname,normalizeNickname} from './server/nickname.mjs';
 const nowSeconds=()=>Math.floor(Date.now()/1000);
 let address=0;
@@ -116,9 +117,48 @@ function visitor(){
 }
 async function runStartedAgo(v,seconds){const {runId}=await (await v('/api/runs',{})).json();sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(nowSeconds()-seconds,runId);return runId;}
 const submitted=id=>sqlite.prepare('SELECT submitted_at FROM runs WHERE id=?').get(id)?.submitted_at??null;
-// Realistic values produced by the game's own code (see test-plausibility.mjs).
+// Values produced by the game's own code: test-plausibility.mjs bot runs and its realistic fixture.
 const botRun={completed:true,normalKills:73,bossKills:4,damageTaken:185,retries:0,elapsed:175};
 
+test('a forged maximum score is rejected with 422 and never ranked',async()=>{
+ const v=visitor(),forged={nickname:'Speedy',completed:true,elapsed:60,normalKills:74,bossKills:4,damageTaken:0,retries:0};
+ assert.equal(scoreRun(forged).total,32280);
+ for(const age of [55,1000]){
+  const runId=await runStartedAgo(v,age),res=await v('/api/results',{...forged,runId}),data=await res.json();
+  assert.equal(res.status,422);assert.equal(data.code,'implausible_time');assert.match(data.error,/not ranked/);assert.equal(submitted(runId),null);
+ }
+ const board=await (await v('/api/leaderboard')).json();assert.ok(!board.entries.some(r=>r.nickname==='Speedy'));
+});
+test('realistic results from the game code are accepted, including one exactly at the floor',async()=>{
+ const v=visitor();
+ for(const [age,r] of [[180,botRun],[1000,{...result,completed:true}],[MIN_PLAUSIBLE_ELAPSED_SECONDS,{completed:true,normalKills:74,bossKills:4,damageTaken:0,retries:0,elapsed:MIN_PLAUSIBLE_ELAPSED_SECONDS}],[2400,{completed:true,normalKills:72,bossKills:4,damageTaken:1450,retries:2,elapsed:2100}]]){
+  const runId=await runStartedAgo(v,age),res=await v('/api/results',{...r,nickname:'Real Hero',runId});
+  assert.equal(res.status,200,JSON.stringify(r));assert.equal((await res.json()).score,scoreRun(r).total);assert.notEqual(submitted(runId),null);
+ }
+});
+test('reported play time must agree with the server clock',async()=>{
+ const v=visitor();
+ let runId=await runStartedAgo(v,200),res=await v('/api/results',{...botRun,nickname:'Clock',runId,elapsed:200+CLOCK_TOLERANCE_SECONDS+1});
+ assert.equal(res.status,400);assert.equal((await res.json()).code,'clock_mismatch');assert.equal(submitted(runId),null);
+ res=await v('/api/results',{...botRun,nickname:'Clock',runId,elapsed:200+CLOCK_TOLERANCE_SECONDS});assert.equal(res.status,200);
+ // Server time far shorter than any real journey: rejected even if the reported time is long enough.
+ runId=await runStartedAgo(v,40);res=await v('/api/results',{...botRun,nickname:'Clock',runId,elapsed:120});assert.equal(res.status,400);assert.equal(submitted(runId),null);
+ assert.equal(checkPlausibility({...botRun,elapsed:120},40).code,'implausible_time');
+ assert.equal(checkPlausibility(botRun,MIN_PLAUSIBLE_ELAPSED_SECONDS-CLOCK_TOLERANCE_SECONDS-1).code,'implausible_time');
+});
+test('impossible kill, boss and retry combinations are rejected',async()=>{
+ const v=visitor();
+ for(const delta of [{normalKills:75},{normalKills:71},{bossKills:5},{bossKills:3}]){
+  const runId=await runStartedAgo(v,1000),res=await v('/api/results',{...botRun,...delta,nickname:'Counts',runId});
+  assert.equal(res.status,400,JSON.stringify(delta));assert.equal(submitted(runId),null);
+ }
+ for(const delta of [{retries:1,damageTaken:0},{retries:2,damageTaken:99}]){
+  const runId=await runStartedAgo(v,1000),res=await v('/api/results',{...botRun,...delta,nickname:'Counts',runId});
+  assert.equal(res.status,422,JSON.stringify(delta));assert.equal((await res.json()).code,'impossible_result');assert.equal(submitted(runId),null);
+ }
+ for(const delta of [{normalKills:75},{bossKills:5},{bossKills:3}])assert.equal(checkPlausibility({...botRun,...delta},1000).code,'impossible_result');
+ assert.equal(checkPlausibility({...botRun,retries:1,damageTaken:100},1000),null);
+});
 test('nicknames are normalised, filtered for abuse and look-alikes, and saved clean',async()=>{
  assert.equal(normalizeNickname('  Ｈｅｒｏ   of\tTroy '),'Hero of Troy');assert.equal(normalizeNickname('ㅋㅋ왕'),'ㅋㅋ왕');
  for(const name of ['Admin','admin01','ADM1N','4dmin','Game Admin','운영자','게임관리자','Odysseus','0dysseus','SYSTEM','Moderator','ѕуѕтем'])assert.equal(checkNickname(name).code,'nickname_reserved',name);

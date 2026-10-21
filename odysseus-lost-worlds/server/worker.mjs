@@ -1,5 +1,6 @@
 import {telemetryApi} from './telemetry.mjs';
 import {checkNickname} from './nickname.mjs';
+import {checkClock,checkPlausibility} from './protection.mjs';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 function database(env){if(!env.DB)throw Error('Leaderboard database unavailable');return env.DB;}
 export function scoreRun(r){
@@ -58,7 +59,10 @@ async function apiWithViewer(request,env,viewerKey){
    if(run.player_key&&run.player_key!==viewerKey)return json({error:'Submit this journey from the browser where it started.'},403);
    if(run.submitted_at)return json({score:run.score,alreadySaved:true});
    const now=Math.floor(Date.now()/1000),age=now-run.started_at;
-   if(age>172800||!validResult(r,age))return json({error:'This result did not pass the journey checks.'},400);
+   if(age>172800)return json({error:'This result did not pass the journey checks.',code:'invalid_result'},400);
+   const clock=checkClock(r,age);if(clock)return json({error:clock.error,code:clock.code},clock.status);
+   if(!validResult(r,age))return json({error:'This result did not pass the journey checks.',code:'invalid_result'},400);
+   const implausible=checkPlausibility(r,age);if(implausible)return json({error:implausible.error,code:implausible.code},implausible.status);
    const parts=scoreRun(r);
    const result=await db.prepare('UPDATE runs SET submitted_at=?,nickname=?,score=?,elapsed=?,normal_kills=?,boss_kills=?,damage_taken=?,retries=?,player_key=COALESCE(player_key,?) WHERE id=? AND submitted_at IS NULL').bind(now,nickname,parts.total,r.elapsed,r.normalKills,r.bossKills,r.damageTaken,r.retries,viewerKey,r.runId).run();
    if(result.meta?.changes===0){const saved=await db.prepare('SELECT score FROM runs WHERE id=?').bind(r.runId).first();return json({score:saved.score,alreadySaved:true});}
