@@ -3,7 +3,18 @@ const rankStatus=document.getElementById('rank-status'),rankSave=document.getEle
 async function rankRequest(path,body){
  const response=await fetch(path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{});
  let data;try{data=await response.json();}catch{throw Error('Online rankings are unavailable. Please try again.');}
- if(!response.ok)throw Error(data.error||'Could not connect to rankings.');return data;
+ if(!response.ok){const error=Error(rankMessage(response,data));error.status=response.status;error.code=data.code||'';throw error;}return data;
+}
+// Clear messages for the server's ranking checks; other errors keep the server's text.
+function rankMessage(response,data){
+ if(response.status===429){const wait=Number(response.headers?.get?.('retry-after'))||data.retryAfter||60;return 'Too many requests from this connection. Please wait '+(wait>=120?Math.ceil(wait/60)+' minutes':wait+' seconds')+' and try again.';}
+ if(data.code==='implausible_time')return 'This result was faster than a real journey can be completed, so it was not ranked.';
+ if(data.code==='impossible_result')return 'This result did not match what the journey allows, so it was not ranked.';
+ if(data.code==='clock_mismatch')return 'This result reported more play time than has passed since the journey started, so it was not ranked.';
+ if(data.code==='nickname_reserved')return 'That nickname is reserved for the game operator. Please choose another.';
+ if(data.code==='nickname_blocked')return 'That nickname is not allowed. Please choose another.';
+ if(data.code==='nickname_mixed_script')return 'Use one alphabet in your nickname. Latin letters cannot be mixed with Cyrillic or Greek letters.';
+ return data.error||'Could not connect to rankings.';
 }
 function startRankRun(){
  const generation=++rankGeneration;rankRunId=null;rankPending=null;rankForm.hidden=true;rankSave.disabled=false;
@@ -29,6 +40,8 @@ async function loadRanking(){
 rankForm.addEventListener('submit',async event=>{
  event.preventDefault();if(!rankPending||!rankRunId)return;rankSave.disabled=true;rankStatus.textContent='Saving your journey…';
  try{const result=await rankRequest('/api/results',{...rankPending,runId:rankRunId,nickname:document.getElementById('rank-name').value});rankStatus.textContent='Saved! Your ranking score: '+result.score.toLocaleString()+'.';rankForm.hidden=true;await loadRanking();}
- catch(error){rankStatus.textContent=error.message;rankSave.disabled=false;}
+ catch(error){rankStatus.textContent=error.message;
+  // A rejected result cannot pass on a second try, so the form closes; nickname and busy errors can be fixed.
+  if(error.status===422||['clock_mismatch','invalid_result'].includes(error.code)){rankForm.hidden=true;rankPending=null;}else rankSave.disabled=false;}
 });
 document.getElementById('rank-refresh').addEventListener('click',async()=>{await rankIdentityReady;await loadRanking();});rankIdentityReady=loadRanking();

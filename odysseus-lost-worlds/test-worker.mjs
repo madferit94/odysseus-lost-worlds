@@ -217,3 +217,18 @@ test('views count only requests that a browser marks as same-site',async()=>{
  res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null,'sec-fetch-site':'same-origin'});assert.equal(res.status,200);assert.equal(count(),before+1);
  res=await v('/api/views',{pageId:crypto.randomUUID()},{'sec-fetch-site':'same-origin'});assert.equal((await res.json()).views,before+2);
 });
+test('ranking page explains rejected results, nickname refusals and busy limits',async()=>{
+ const els=new Map();const element=id=>{if(!els.has(id))els.set(id,{textContent:'',value:'Hero',hidden:false,disabled:false,children:[],events:{},addEventListener(k,f){this.events[k]=f;},appendChild(v){this.children.push(v);},replaceChildren(){this.children=[];}});return els.get(id);};
+ let reply=null;const v=visitor();
+ const ctx=vm.createContext({console,document:{getElementById:element,createElement:()=>({children:[],textContent:'',appendChild(c){this.children.push(c);}})},fetch:async(p,opts)=>reply&&p==='/api/results'?reply():v(p,opts?.body?JSON.parse(opts.body):undefined)});
+ vm.runInContext(fs.readFileSync('ranking.js','utf8'),ctx);await vm.runInContext('rankIdentityReady',ctx);
+ const finish=async(r)=>{await vm.runInContext('startRankRun();rankStarting',ctx);sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(nowSeconds()-1000,vm.runInContext('rankRunId',ctx));await vm.runInContext('finishRankRun('+JSON.stringify(r)+')',ctx);};
+ const submit=()=>element('rank-form').events.submit({preventDefault(){}});
+ await finish({...botRun,elapsed:60});await submit();
+ assert.match(element('rank-status').textContent,/faster than a real journey.*not ranked/);assert.equal(element('rank-form').hidden,true);
+ await finish(botRun);element('rank-name').value='Adm1n';await submit();
+ assert.match(element('rank-status').textContent,/reserved/);assert.equal(element('rank-form').hidden,false);assert.equal(element('rank-save').disabled,false);
+ reply=()=>new Response(JSON.stringify({error:'busy',code:'rate_limited',retryAfter:42}),{status:429,headers:{'content-type':'application/json','retry-after':'42'}});
+ await submit();assert.match(element('rank-status').textContent,/wait 42 seconds/);assert.equal(element('rank-form').hidden,false);assert.equal(element('rank-save').disabled,false);
+ reply=null;element('rank-name').value='Sea Wanderer';await submit();assert.match(element('rank-status').textContent,/Saved!/);
+});
