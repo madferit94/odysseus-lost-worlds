@@ -107,6 +107,9 @@ test('unavailable view storage returns an error instead of a fabricated count',a
 });
 
 // ---- Ranking protection ------------------------------------------------------
+import os from 'node:os';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 import {RATE_LIMITS,UNKNOWN_CLIENT_MULTIPLIER,MAX_TRACKED_CLIENTS,MIN_PLAUSIBLE_ELAPSED_SECONDS,CLOCK_TOLERANCE_SECONDS,UNSUBMITTED_RUN_TTL_SECONDS,checkPlausibility,rateLimit,trackedClients,resetProtectionState} from './server/protection.mjs';
 import {checkNickname,normalizeNickname} from './server/nickname.mjs';
 const nowSeconds=()=>Math.floor(Date.now()/1000);
@@ -216,6 +219,26 @@ test('views count only requests that a browser marks as same-site',async()=>{
  res=await v('/api/views',{pageId:crypto.randomUUID()},{'sec-fetch-site':'cross-site'});assert.equal(res.status,403);
  res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null,'sec-fetch-site':'same-origin'});assert.equal(res.status,200);assert.equal(count(),before+1);
  res=await v('/api/views',{pageId:crypto.randomUUID()},{'sec-fetch-site':'same-origin'});assert.equal((await res.json()).views,before+2);
+});
+test('admin removal tool lists matches as a dry run and deletes only with --confirm',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'odysseus-admin-')),file=path.join(dir,'ranking.sqlite');
+ try{
+  const db=new DatabaseSync(file);for(const f of fs.readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())db.exec(fs.readFileSync('drizzle/'+f,'utf8'));
+  const add=db.prepare('INSERT INTO runs (id,started_at,submitted_at,nickname,score,elapsed,normal_kills,boss_kills,damage_taken,retries) VALUES (?,?,?,?,?,?,?,?,?,?)');
+  add.run('aaaaaaaa-0000-4000-8000-000000000001',1,2,'Cheater',32280,60,74,4,0,0);add.run('aaaaaaaa-0000-4000-8000-000000000002',1,3,'cheater',32000,61,74,4,0,0);
+  add.run('aaaaaaaa-0000-4000-8000-000000000003',1,4,'Hero',30000,600,72,4,100,1);db.close();
+  const tool=(...args)=>spawnSync(process.execPath,['admin-remove-run.mjs',...args],{encoding:'utf8'});
+  const left=()=>{const d=new DatabaseSync(file);try{return d.prepare('SELECT nickname FROM runs ORDER BY id').all().map(r=>r.nickname);}finally{d.close();}};
+  let out=tool('--db',file,'--nickname','  CHEATER ');assert.equal(out.status,0,out.stderr);
+  assert.match(out.stdout,/2 matching row/);assert.match(out.stdout,/score=32280/);assert.match(out.stdout,/Dry run: nothing was deleted/);assert.deepEqual(left(),['Cheater','cheater','Hero']);
+  out=tool('--db',file,'--nickname','Cheater','--confirm');assert.equal(out.status,0,out.stderr);assert.match(out.stdout,/Deleted 2 row/);assert.deepEqual(left(),['Hero']);
+  out=tool('--db',file,'--run','aaaaaaaa-0000-4000-8000-000000000003');assert.match(out.stdout,/1 matching row/);assert.deepEqual(left(),['Hero']);
+  out=tool('--db',file,'--run','aaaaaaaa-0000-4000-8000-000000000003','--confirm');assert.match(out.stdout,/Deleted 1 row/);assert.deepEqual(left(),[]);
+  // Live database: works from an owner snapshot and prints the statement instead of deleting.
+  const snapshot=path.join(dir,'runs.json');fs.writeFileSync(snapshot,JSON.stringify({complete:true,runs:[{id:'bbbbbbbb-0000-4000-8000-000000000001',nickname:'Cheater',score:32280}]}));
+  out=tool('--snapshot',snapshot,'--nickname','cheater','--confirm');assert.equal(out.status,0,out.stderr);assert.match(out.stdout,/DELETE FROM runs WHERE id IN \('bbbbbbbb-0000-4000-8000-000000000001'\);/);assert.match(out.stdout,/Nothing was deleted locally/);
+  assert.notEqual(tool('--db',file).status,0);assert.notEqual(tool('--db',file,'--run',"x' OR 1=1 --").status,0);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('ranking page explains rejected results, nickname refusals and busy limits',async()=>{
  const els=new Map();const element=id=>{if(!els.has(id))els.set(id,{textContent:'',value:'Hero',hidden:false,disabled:false,children:[],events:{},addEventListener(k,f){this.events[k]=f;},appendChild(v){this.children.push(v);},replaceChildren(){this.children=[];}});return els.get(id);};
