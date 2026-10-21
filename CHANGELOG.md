@@ -1,49 +1,61 @@
-# 업데이트 내역
+# Changelog
 
-[README로 돌아가기](README.md) · [English](CHANGELOG.en.md)
+[Back to README](README.md) · [한국어](CHANGELOG.ko.md)
 
-## v17 업데이트 · 더 큰 게임 화면
+## What's new in v17 · A larger playfield display
 
-- 일반 화면의 최대 너비 제한을 없애고, 조작 안내를 필요할 때 여는 방식으로 바꿨습니다.
-- `전체 화면`을 누르면 제목과 주변 영역을 숨겨 모니터에 맞춰 확대합니다. 화면 비율은 16:9로 유지하고, 다른 비율의 모니터에서는 여백을 둡니다.
-- 전체 화면에서도 언어·음향·조작 안내를 이용할 수 있습니다. 안내를 열거나 전체 화면을 나가면 게임을 멈춥니다. 안내를 닫은 뒤 계속하기를 눌러 재개합니다.
-- `Esc`는 열린 안내를 먼저 닫고, 다음에는 전체 화면을 나갑니다. 일반 화면에서는 기존처럼 일시정지/계속하기입니다.
-- 전체 화면을 허용하지 않는 브라우저에서는 브라우저 창 안에서 확대합니다.
-- 게임 속 이동 범위, 난이도, 전투 수치, 순위와 선택형 기록 수집은 그대로입니다. 새 플레이 기록에는 `v17`을 저장해 이전 버전과 구분합니다.
+- Removed the desktop width cap and made the control guide collapsible.
+- Fullscreen hides the surrounding page and fits the game to the monitor. The 16:9 aspect ratio is preserved, with letterboxing on other screen shapes.
+- Language, sound and controls remain accessible in fullscreen. Opening controls or leaving fullscreen pauses the game; close the guide and resume explicitly.
+- `Esc` closes an open guide first, then exits fullscreen. Outside fullscreen it still pauses/resumes the game.
+- Browsers that deny fullscreen use an expanded in-window view instead.
+- World boundaries, difficulty, combat balance, rankings and optional analytics are unchanged. New analytics sessions are labeled `v17` to distinguish them from earlier sessions.
 
-이번 변경은 저장소 병합까지 진행하며, 위 공개 링크는 별도 배포 전까지 v16입니다. 화면 크기 요청을 반영한 변경으로, 이용자 만족도나 완료율 개선이 측정됐다는 의미는 아닙니다.
+This change is merged into the repository only; the public link stays on v16 until a separate deployment. It responds to screen-size feedback, not a measured improvement in satisfaction or completion rate.
 
-## v16 업데이트 · 선택형 플레이 기록
+## v17 (repository only, not deployed) · Additional fixes
 
-게임 위의 ‘플레이 기록 분석에 참여’를 선택한 다음 새 게임을 시작하면 난이도, 스테이지 진행, 보스전, 사망·재도전, 필살기 준비·사용과 게임 결과를 기록합니다. 기본값은 미동의이며, 동의하지 않아도 플레이할 수 있습니다. v15의 전투 수치는 그대로입니다.
+- Keyboard: when a link, button, form field or a fold-out section such as "How the ranking works" has focus, Enter and Space act on that item instead of starting a game. Arrow keys and Space scroll the page unless a game is running or the game screen has focus. Controls during play are unchanged.
+- Narrow screens (under 620px wide): the title and pause panel now sits below the game screen instead of covering the buttons and text around it.
+- Accessibility: with the system "reduce motion" setting, the screen no longer shakes and white flashes are softer. The game screen shows an outline when it has keyboard focus.
+- Server: a ranking submission whose body is not a proper record (for example `null`) now gets a "could not be read" error instead of "temporarily unavailable".
+- The page no longer asks for a missing site icon (favicon) on every visit.
+- Documents: the changelog, game folder guide and analytics guide now follow one naming rule (`X.md` English, `X.ko.md` Korean), and broken links were fixed.
+- 7 automated checks were added for these fixes and for the v17 fullscreen controls. Difficulty, combat numbers, rankings and analytics events are unchanged.
 
-- 게임마다 새 임의 번호를 사용하며 분석 표에 이름·이메일·IP·전체 유입 주소를 저장하지 않습니다. 순위표와 호스팅 접속 기록은 별개입니다.
-- 참여를 해제하면 이후 수집을 멈춥니다. 이미 전송된 기록은 보관 정책에 따릅니다.
-- 운영자만 원본을 조회하고 CSV로 내보냅니다. 테스트 자료는 기본 분석에서 제외합니다.
-- 결과를 확인하지 못한 플레이는 실패로 단정하지 않습니다. 최근 90일을 분석 대상으로 하며, 오래된 원본은 다음 수집 요청 때 정리합니다.
+These fixes are in the repository only. The public game stays on v16 until a separate deployment.
 
-[수집 항목·분석 한계·운영자 내보내기 안내](odysseus-lost-worlds/TELEMETRY-v16.md)
+## What's new in v16 · Optional play analytics
 
-자동 검사 109개와 테스트 기록의 실제 서버 저장을 확인했습니다. 브라우저 시작 검사와 자동 전투 시뮬레이션을 구분했으며, 실제 이용자 분석 성과를 뜻하지는 않습니다.
+Opt in above the game before starting a new journey to record difficulty, stage progress, boss attempts, deaths, retries, finisher readiness/use and outcomes. Analytics is off by default; you can play without it. v15 gameplay balance is unchanged.
 
-## v15 업데이트
+- Each journey uses a new random ID. Analytics tables do not store names, emails, IP addresses or full referring URLs. Rankings and hosting access logs are separate.
+- Uncheck to stop future collection. Previously sent records remain under the retention policy.
+- Only the operator can read raw events and export CSVs. Test records are excluded by default.
+- An unknown outcome is not treated as failure. Exports cover the last 90 days; older raw records are cleaned on subsequent collection requests.
 
-### 네 가지 여정 난이도
+[Collection definitions, limitations and operator export guide](odysseus-lost-worlds/TELEMETRY-v16.md)
 
-| 난이도 | 일반 적 체력 / 공격력 | 보스 체력 / 공격력 |
+109 automated checks passed, and test events were verified in the live database. Browser start checks and automated combat simulations are distinguished; these are not findings from real players.
+
+## What's new in v15
+
+### Four difficulty levels
+
+| Difficulty | Regular enemy HP / damage | Boss HP / damage |
 | --- | --- | --- |
-| 이타카의 길 · 쉬움 | 85% / 85% | 85% / 85% |
-| 에게해의 항해 · 보통 | 100% / 100% | 100% / 100% |
-| 신들의 시련 · 어려움 | 115% / 115% | 120% / 115% |
-| 포세이돈의 분노 · 최상 | 130% / 130% | 135% / 130% |
+| Ithaca's Path · Easy | 85% / 85% | 85% / 85% |
+| Aegean Voyage · Normal | 100% / 100% | 100% / 100% |
+| Trial of the Gods · Hard | 115% / 115% | 120% / 115% |
+| Poseidon's Wrath · Extreme | 130% / 130% | 135% / 130% |
 
-비율은 v14의 능력치를 기준으로 합니다. 체력과 피해량은 정수로 반올림합니다. 기본 난이도는 **에게해의 항해**이며, 진행 중인 게임의 난이도는 바뀌지 않습니다. 새로 선택한 난이도는 새 게임을 시작할 때 적용됩니다.
+Percentages are relative to v14 stats. Health and damage values are rounded to integers. **Aegean Voyage** is the default. Difficulty stays fixed during a run; a new selection takes effect when you start a new game.
 
-### 두 칸 필살기 게이지
+### Two-bar finisher gauge
 
-에너지는 최대 **2칸**까지 모입니다. Q·W·E는 각각 1칸, R 제우스는 2칸이 필요하며 사용한 만큼만 차감됩니다.
+Store up to **2 energy bars**. Q, W, and E each require 1 bar; R, Zeus, requires 2 bars. Only the energy spent is deducted.
 
-### 이전 업데이트
+### Previous updates
 
-- **v14:** 보스 체력과 공격력을 약 5% 낮췄습니다. v15에서도 이 조정을 유지합니다.
-- **v13:** 목숨 3개와 보스전 무작위 회복 구역을 추가했습니다. 목숨이 남아 있으면 쓰러진 전투에서 다시 도전할 수 있습니다.
+- **v14:** Reduced boss health and damage by approximately 5%. These adjustments remain in v15.
+- **v13:** Added three lives and randomly appearing boss-fight healing zones. If you have lives remaining, you can retry the fight after falling.

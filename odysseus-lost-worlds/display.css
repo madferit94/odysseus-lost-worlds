@@ -34,3 +34,11 @@ body.display-fullscreen{overflow:hidden}
  .play-toolbar{gap:6px}
  .play-toolbar button{padding:8px;font-size:13px}
 }
+/* Narrow screens: the 16:9 canvas is too short to hold the title/pause panel,
+   so the panel sits directly below the canvas instead of spilling over the page. */
+@media(max-width:620px){
+ .frame .overlay{position:static;margin-top:7px;background:#07111a}
+ .frame .overlay .panel{padding:8px 6px}
+}
+/* Keyboard users can see when the game canvas has focus. */
+canvas:focus-visible{outline:3px solid #a6f5ff;outline-offset:2px}

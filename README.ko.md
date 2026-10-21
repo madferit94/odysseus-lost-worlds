@@ -16,7 +16,7 @@
 - **생존:** 목숨 3개로 시작하며, 보스전 중 무작위로 나타나는 초록색 회복 구역 안에 서 있으면 체력이 회복됩니다.
 - **점수와 순위:** 여정을 완료하면 공개 게임에서 닉네임으로 점수를 등록할 수 있습니다. 로그인은 필요하지 않습니다.
 - **난이도 4단계:** 이타카의 길(쉬움)부터 포세이돈의 분노(최상)까지 고를 수 있습니다.
-- **선택형 플레이 기록:** 동의한 경우에만 스테이지 진행·보스전·사망 기록을 익명으로 수집합니다. 기본값은 미동의입니다. [수집 안내](odysseus-lost-worlds/TELEMETRY-v16.md)
+- **선택형 플레이 기록:** 동의한 경우에만 스테이지 진행·보스전·사망 기록을 익명으로 수집합니다. 기본값은 미동의입니다. [수집 안내](odysseus-lost-worlds/TELEMETRY-v16.ko.md)
 
 컴퓨터와 키보드로 플레이하는 게임입니다.
 
@@ -41,7 +41,7 @@
 
 공격·방어·필살기는 착지 후 사용합니다. 착지 직후에는 짧은 대기 시간이 있습니다.
 
-버전별 변경 사항은 [CHANGELOG](CHANGELOG.md)에서 확인할 수 있습니다.
+버전별 변경 사항은 [CHANGELOG](CHANGELOG.ko.md)에서 확인할 수 있습니다.
 
 ## AI와 함께 만든 과정
 
@@ -54,6 +54,8 @@
 ```text
 README.md                 영어 소개 (English)
 README.ko.md              한국어 소개
+CHANGELOG.md              영어 업데이트 내역 (English)
+CHANGELOG.ko.md           한국어 업데이트 내역
 odysseus-lost-worlds/
   index.html              게임 화면
   *.js                    이동·전투·필살기·화면 표시 등
@@ -61,15 +63,17 @@ odysseus-lost-worlds/
   server/                 순위·조회수·플레이 기록 서버
   db/ · drizzle/          데이터 저장 구조와 변경 이력
   test-*.cjs / test-*.mjs  자동 검사
-  TELEMETRY-v16.md         기록 수집·내보내기 안내
-  README.md               게임 폴더 안내
+  TELEMETRY-v16.md         기록 수집·내보내기 안내 (영어)
+  TELEMETRY-v16.ko.md      기록 수집·내보내기 안내 (한국어)
+  README.md               게임 폴더 안내 (영어)
+  README.ko.md            게임 폴더 안내 (한국어)
 ```
 
 저장소를 내려받은 뒤 폴더 구성을 그대로 유지하고 `odysseus-lost-worlds/index.html`을 컴퓨터 브라우저에서 엽니다. 게임 화면을 실행하기 위해 npm이나 패키지를 설치할 필요는 없습니다. HTML, CSS, JavaScript와 Canvas로 동작합니다.
 
 이 저장소에는 브라우저 게임과 서버 소스가 함께 있습니다. **온라인 순위·조회수·플레이 기록은 공개 사이트의 서버와 데이터베이스가 필요한 기능**이므로, 파일을 직접 열거나 다른 곳에 업로드하는 것만으로 동일하게 제공되지는 않습니다. 실제 이용 기록·CSV·비밀 인증값은 포함하지 않습니다.
 
-개발 검사는 Node.js 24 이상에서 게임 폴더로 이동하여 `node test-game.cjs`, `node --test test-worker.mjs test-telemetry.mjs`, `node build.mjs`로 실행합니다. `.openai/hosting.json`은 기존 Sites 프로젝트의 연결 식별자입니다. 다른 계정에서 배포하려면 자신의 프로젝트와 데이터베이스 연결을 별도로 준비해야 합니다.
+개발 검사는 Node.js 24 이상에서 게임 폴더로 이동하여 `npm test`(게임·화면·서버·플레이 기록 검사, 설치 불필요)와 `node build.mjs`로 실행합니다. `.openai/hosting.json`은 기존 Sites 프로젝트의 연결 식별자입니다. 다른 계정에서 배포하려면 자신의 프로젝트와 데이터베이스 연결을 별도로 준비해야 합니다.
 
 ## 현재 알아둘 점
 
