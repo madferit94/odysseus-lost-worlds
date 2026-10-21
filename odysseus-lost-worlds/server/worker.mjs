@@ -1,4 +1,6 @@
 import {telemetryApi} from './telemetry.mjs';
+import {checkNickname} from './nickname.mjs';
+import {checkClock,checkPlausibility,clientAddress,rateLimit,rateLimitedResponse,purgeUnsubmittedRuns} from './protection.mjs';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 function database(env){if(!env.DB)throw Error('Leaderboard database unavailable');return env.DB;}
 export function scoreRun(r){
@@ -29,8 +31,15 @@ async function apiWithViewer(request,env,viewerKey){
   const db=database(env);
   if(path==='/api/views'&&['GET','POST'].includes(request.method)){
    if(request.method==='POST'){
+    // Count only requests a browser marks as coming from this site. Browsers send
+    // Origin (and usually Sec-Fetch-Site) with this request; scripts that send
+    // neither header get the current count without adding a view.
+    const site=request.headers.get('sec-fetch-site');
+    if(site&&!['same-origin','same-site'].includes(site))return json({error:'Use the game website to count views.'},403);
+    const counted=!!(request.headers.get('origin')||site);
     let data;try{data=await body(request);}catch{return json({error:'Invalid page view.'},400);}
     if(typeof data?.pageId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(data.pageId))return json({error:'Invalid page view.'},400);
+    if(!counted){const row=await db.prepare('SELECT COUNT(*) AS views FROM page_views').first();return json({views:row.views,since:'2026-09-11',counted:false});}
     const results=await db.batch([
      db.prepare('INSERT INTO page_views (id,viewed_at) VALUES (?,?) ON CONFLICT(id) DO NOTHING').bind(data.pageId.toLowerCase(),Math.floor(Date.now()/1000)),
      db.prepare('SELECT COUNT(*) AS views FROM page_views')
@@ -45,19 +54,23 @@ async function apiWithViewer(request,env,viewerKey){
   }
   if(path==='/api/runs'&&request.method==='POST'){
    const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
+   await purgeUnsubmittedRuns(db,now);
    await db.prepare('INSERT INTO runs (id,started_at,player_key) VALUES (?,?,?)').bind(id,now,viewerKey).run();return json({runId:id},201);
   }
   if(path==='/api/results'&&request.method==='POST'){
    let r;try{r=await body(request);}catch{return json({error:'The result could not be read.'},400);}
    if(!r||typeof r!=='object'||Array.isArray(r))return json({error:'The result could not be read.'},400);
    if(typeof r.runId!=='string'||!/^[-a-z0-9]{36}$/.test(r.runId)||typeof r.nickname!=='string')return json({error:'Start a new journey before submitting.'},400);
-   const nickname=r.nickname.trim();if(!/^[\p{L}\p{N} _.-]{1,16}$/u.test(nickname))return json({error:'Use 1–16 letters, numbers, spaces, dots, dashes or underscores.'},400);
+   const named=checkNickname(r.nickname);if(!named.nickname)return json({error:named.error,code:named.code},400);const nickname=named.nickname;
    const run=await db.prepare('SELECT * FROM runs WHERE id=?').bind(r.runId).first();
    if(!run)return json({error:'Journey not found. Please start a new game.'},404);
    if(run.player_key&&run.player_key!==viewerKey)return json({error:'Submit this journey from the browser where it started.'},403);
    if(run.submitted_at)return json({score:run.score,alreadySaved:true});
    const now=Math.floor(Date.now()/1000),age=now-run.started_at;
-   if(age>172800||!validResult(r,age))return json({error:'This result did not pass the journey checks.'},400);
+   if(age>172800)return json({error:'This result did not pass the journey checks.',code:'invalid_result'},400);
+   const clock=checkClock(r,age);if(clock)return json({error:clock.error,code:clock.code},clock.status);
+   if(!validResult(r,age))return json({error:'This result did not pass the journey checks.',code:'invalid_result'},400);
+   const implausible=checkPlausibility(r,age);if(implausible)return json({error:implausible.error,code:implausible.code},implausible.status);
    const parts=scoreRun(r);
    const result=await db.prepare('UPDATE runs SET submitted_at=?,nickname=?,score=?,elapsed=?,normal_kills=?,boss_kills=?,damage_taken=?,retries=?,player_key=COALESCE(player_key,?) WHERE id=? AND submitted_at IS NULL').bind(now,nickname,parts.total,r.elapsed,r.normalKills,r.bossKills,r.damageTaken,r.retries,viewerKey,r.runId).run();
    if(result.meta?.changes===0){const saved=await db.prepare('SELECT score FROM runs WHERE id=?').bind(r.runId).first();return json({score:saved.score,alreadySaved:true});}
@@ -66,7 +79,11 @@ async function apiWithViewer(request,env,viewerKey){
   return json({error:'Not found'},404);
  }catch(error){console.error('Leaderboard request failed',error instanceof Error?error.message:'Unknown error');return json({error:path==='/api/views'?'Views are temporarily unavailable. Please try again.':'Rankings are temporarily unavailable. Please try again.'},503);}
 }
+// Best-effort per-address limits for requests that write to the database.
+const LIMITED_POSTS={'/api/runs':'runs','/api/results':'results','/api/views':'views','/api/telemetry/start':'telemetryStart','/api/telemetry/events':'telemetryEvents'};
 export async function api(request,env){
+ const limitName=request.method==='POST'&&LIMITED_POSTS[new URL(request.url).pathname];
+ if(limitName){const wait=rateLimit(limitName,clientAddress(request));if(wait)return rateLimitedResponse(wait);}
  if(new URL(request.url).pathname.startsWith('/api/telemetry/'))return telemetryApi(request,env);
  if(new URL(request.url).pathname==='/api/views')return apiWithViewer(request,env,null);
  const found=request.headers.get('cookie')?.split(';').map(v=>v.trim()).find(v=>v.startsWith('odysseus_player='))?.slice('odysseus_player='.length);

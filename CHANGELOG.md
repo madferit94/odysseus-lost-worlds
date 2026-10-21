@@ -21,7 +21,12 @@ This change is merged into the repository only; the public link stays on v16 unt
 - Server: a ranking submission whose body is not a proper record (for example `null`) now gets a "could not be read" error instead of "temporarily unavailable".
 - The page no longer asks for a missing site icon (favicon) on every visit.
 - Documents: the changelog, game folder guide and analytics guide now follow one naming rule (`X.md` English, `X.ko.md` Korean), and broken links were fixed.
-- 7 automated checks were added for these fixes and for the v17 fullscreen controls. Difficulty, combat numbers, rankings and analytics events are unchanged.
+- 7 automated checks were added for these fixes and for the v17 fullscreen controls. Difficulty, combat numbers and analytics events are unchanged.
+- Ranking protection: the server now also refuses results that a real journey cannot produce: a finish under 100 seconds, or a retry without the damage needed to fall. (Enemy counts, and play time longer than the time since the start, were already checked.) Refused results get a clear message and are not ranked. The 100-second limit is well below the fastest automated run of the real game (about 175 seconds).
+- Nicknames: full-width letters and extra spaces are cleaned up before saving. A basic filter refuses common English and Korean swear words, operator-like names such as "admin" or "운영자", and names that mix look-alike alphabets. It is not full moderation.
+- Request limits: each connection can start, submit and count views only a limited number of times per 10 minutes; over the limit, the game asks you to wait. Journeys that were started but never submitted are cleaned up after 24 hours. Page views count only requests the browser marks as coming from the game site.
+- The operator has a tool to find and remove a ranking entry ([game folder guide](odysseus-lost-worlds/README.md#ranking-protection)).
+- 14 automated checks were added for ranking protection. Score formula, difficulty, combat numbers and analytics events are unchanged.
 
 These fixes are in the repository only. The public game stays on v16 until a separate deployment.
 

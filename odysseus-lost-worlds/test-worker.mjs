@@ -94,7 +94,7 @@ test('simultaneous view retries count a page once; separate page loads each coun
 });
 test('view display recovers a lost response without double counting and translates labels',async()=>{
  const before=sqlite.prepare('SELECT count(*) n FROM page_views').get().n,els=new Map(),el=id=>{if(!els.has(id))els.set(id,{textContent:''});return els.get(id);};let loseResponse=true;
- const ctx=vm.createContext({console,crypto,controlLanguage:'en',document:{getElementById:el},fetch:async(path,opts)=>{const response=await rawApi(new Request('https://game.example'+path,opts),env);if(loseResponse)throw Error('Lost response');return response;}});
+ const ctx=vm.createContext({console,crypto,controlLanguage:'en',document:{getElementById:el},fetch:async(path,opts)=>{const response=await rawApi(new Request('https://game.example'+path,{...opts,headers:{...opts.headers,origin:'https://game.example'}}),env);if(loseResponse)throw Error('Lost response');return response;}});
  vm.runInContext(fs.readFileSync('views.js','utf8'),ctx);await vm.runInContext('pageViewsLoading',ctx);
  assert.equal(el('site-views').textContent,'Retry views');assert.equal(el('site-views').disabled,false);
  assert.equal(sqlite.prepare('SELECT count(*) n FROM page_views').get().n,before+1);
@@ -104,4 +104,154 @@ test('view display recovers a lost response without double counting and translat
 });
 test('unavailable view storage returns an error instead of a fabricated count',async()=>{
  const response=await rawApi(request('/api/views'),{});assert.equal(response.status,503);const data=await response.json();assert.equal(data.views,undefined);assert.match(data.error,/Views are temporarily unavailable/);
+});
+
+// ---- Ranking protection ------------------------------------------------------
+import os from 'node:os';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {RATE_LIMITS,UNKNOWN_CLIENT_MULTIPLIER,MAX_TRACKED_CLIENTS,MIN_PLAUSIBLE_ELAPSED_SECONDS,CLOCK_TOLERANCE_SECONDS,UNSUBMITTED_RUN_TTL_SECONDS,checkPlausibility,rateLimit,trackedClients,resetProtectionState} from './server/protection.mjs';
+import {checkNickname,normalizeNickname} from './server/nickname.mjs';
+const nowSeconds=()=>Math.floor(Date.now()/1000);
+// Each protection test uses its own client address so rate limits do not leak between tests.
+let address=0;
+function visitor(){
+ const ip='198.51.100.'+(++address);let jar='';
+ return async(path,data,headers={})=>{const req=request(path,data);req.headers.set('cf-connecting-ip',ip);for(const [k,v] of Object.entries(headers))v===null?req.headers.delete(k):req.headers.set(k,v);if(jar)req.headers.set('cookie',jar);const res=await rawApi(req,env);const next=res.headers.get('set-cookie');if(next)jar=next.split(';')[0];return res;};
+}
+async function runStartedAgo(v,seconds){const {runId}=await (await v('/api/runs',{})).json();sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(nowSeconds()-seconds,runId);return runId;}
+const submitted=id=>sqlite.prepare('SELECT submitted_at FROM runs WHERE id=?').get(id)?.submitted_at??null;
+// Values produced by the game's own code: test-plausibility.mjs bot runs and its realistic fixture.
+const botRun={completed:true,normalKills:73,bossKills:4,damageTaken:185,retries:0,elapsed:175};
+
+test('a forged maximum score is rejected with 422 and never ranked',async()=>{
+ const v=visitor(),forged={nickname:'Speedy',completed:true,elapsed:60,normalKills:74,bossKills:4,damageTaken:0,retries:0};
+ assert.equal(scoreRun(forged).total,32280);
+ for(const age of [55,1000]){
+  const runId=await runStartedAgo(v,age),res=await v('/api/results',{...forged,runId}),data=await res.json();
+  assert.equal(res.status,422);assert.equal(data.code,'implausible_time');assert.match(data.error,/not ranked/);assert.equal(submitted(runId),null);
+ }
+ const board=await (await v('/api/leaderboard')).json();assert.ok(!board.entries.some(r=>r.nickname==='Speedy'));
+});
+test('realistic results from the game code are accepted, including one exactly at the floor',async()=>{
+ const v=visitor();
+ for(const [age,r] of [[180,botRun],[1000,{...result,completed:true}],[MIN_PLAUSIBLE_ELAPSED_SECONDS,{completed:true,normalKills:74,bossKills:4,damageTaken:0,retries:0,elapsed:MIN_PLAUSIBLE_ELAPSED_SECONDS}],[2400,{completed:true,normalKills:72,bossKills:4,damageTaken:1450,retries:2,elapsed:2100}]]){
+  const runId=await runStartedAgo(v,age),res=await v('/api/results',{...r,nickname:'Real Hero',runId});
+  assert.equal(res.status,200,JSON.stringify(r));assert.equal((await res.json()).score,scoreRun(r).total);assert.notEqual(submitted(runId),null);
+ }
+});
+test('reported play time must agree with the server clock',async()=>{
+ const v=visitor();
+ let runId=await runStartedAgo(v,200),res=await v('/api/results',{...botRun,nickname:'Clock',runId,elapsed:200+CLOCK_TOLERANCE_SECONDS+1});
+ assert.equal(res.status,400);assert.equal((await res.json()).code,'clock_mismatch');assert.equal(submitted(runId),null);
+ res=await v('/api/results',{...botRun,nickname:'Clock',runId,elapsed:200+CLOCK_TOLERANCE_SECONDS});assert.equal(res.status,200);
+ // Server time far shorter than any real journey: rejected even if the reported time is long enough.
+ runId=await runStartedAgo(v,40);res=await v('/api/results',{...botRun,nickname:'Clock',runId,elapsed:120});assert.equal(res.status,400);assert.equal(submitted(runId),null);
+ assert.equal(checkPlausibility({...botRun,elapsed:120},40).code,'implausible_time');
+ assert.equal(checkPlausibility(botRun,MIN_PLAUSIBLE_ELAPSED_SECONDS-CLOCK_TOLERANCE_SECONDS-1).code,'implausible_time');
+});
+test('impossible kill, boss and retry combinations are rejected',async()=>{
+ const v=visitor();
+ for(const delta of [{normalKills:75},{normalKills:71},{bossKills:5},{bossKills:3}]){
+  const runId=await runStartedAgo(v,1000),res=await v('/api/results',{...botRun,...delta,nickname:'Counts',runId});
+  assert.equal(res.status,400,JSON.stringify(delta));assert.equal(submitted(runId),null);
+ }
+ for(const delta of [{retries:1,damageTaken:0},{retries:2,damageTaken:99}]){
+  const runId=await runStartedAgo(v,1000),res=await v('/api/results',{...botRun,...delta,nickname:'Counts',runId});
+  assert.equal(res.status,422,JSON.stringify(delta));assert.equal((await res.json()).code,'impossible_result');assert.equal(submitted(runId),null);
+ }
+ for(const delta of [{normalKills:75},{bossKills:5},{bossKills:3}])assert.equal(checkPlausibility({...botRun,...delta},1000).code,'impossible_result');
+ assert.equal(checkPlausibility({...botRun,retries:1,damageTaken:100},1000),null);
+});
+test('nicknames are normalised, filtered for abuse and look-alikes, and saved clean',async()=>{
+ assert.equal(normalizeNickname('  Ｈｅｒｏ   of\tTroy '),'Hero of Troy');assert.equal(normalizeNickname('ㅋㅋ왕'),'ㅋㅋ왕');
+ for(const name of ['Admin','admin01','ADM1N','4dmin','Game Admin','운영자','게임관리자','Odysseus','0dysseus','SYSTEM','Moderator','ѕуѕтем'])assert.equal(checkNickname(name).code,'nickname_reserved',name);
+ for(const name of ['fuck','F.u.C.k','FuuuCK','sh1t','씨발','ㅅㅂ','병신아','tlqkf','Dick'])assert.equal(checkNickname(name).code,'nickname_blocked',name);
+ for(const name of ['Hеro','аdmin','Ηero'])assert.equal(checkNickname(name).code,'nickname_mixed_script',name);
+ for(const name of ['<b>x</b>','','x'.repeat(17),'a​b'])assert.equal(checkNickname(name).code,'nickname_format',name);
+ for(const name of ['Hero','오디세우스','Badminton','Dickens','Nigeria','시발점','Привет','김민수Kim','Hero_1.0-a'])assert.equal(checkNickname(name).nickname,name,name);
+ const v=visitor();
+ let runId=await runStartedAgo(v,1000);const saved=await v('/api/results',{...botRun,runId,nickname:'  Ｓｅａ   Ｗａｎｄｅｒｅｒ  '});assert.equal(saved.status,200);
+ assert.equal(sqlite.prepare('SELECT nickname FROM runs WHERE id=?').get(runId).nickname,'Sea Wanderer');
+ for(const [nickname,code] of [['Adm1n','nickname_reserved'],['씨발','nickname_blocked'],['Hеro','nickname_mixed_script']]){
+  runId=await runStartedAgo(v,1000);const res=await v('/api/results',{...botRun,runId,nickname});const data=await res.json();
+  assert.equal(res.status,400);assert.equal(data.code,code);assert.ok(data.error);assert.equal(submitted(runId),null);
+ }
+});
+test('each write endpoint has a per-address limit with 429 and Retry-After',async()=>{
+ resetProtectionState();
+ const calls={runs:v=>v('/api/runs',{}),results:v=>v('/api/results',{runId:'bad'}),views:v=>v('/api/views',{pageId:crypto.randomUUID()}),telemetryStart:v=>v('/api/telemetry/start',{}),telemetryEvents:v=>v('/api/telemetry/events',{})};
+ for(const [name,call] of Object.entries(calls)){
+  const v=visitor(),{limit,windowSeconds}=RATE_LIMITS[name];
+  for(let i=0;i<limit;i++)assert.notEqual((await call(v)).status,429,name+' request '+(i+1));
+  const res=await call(v),data=await res.json(),wait=Number(res.headers.get('retry-after'));
+  assert.equal(res.status,429,name);assert.equal(data.code,'rate_limited');assert.ok(Number.isInteger(wait)&&wait>=1&&wait<=windowSeconds,name+' Retry-After '+wait);assert.equal(data.retryAfter,wait);
+  assert.notEqual((await call(visitor())).status,429,name+' other address');
+ }
+ // GET requests are not limited.
+ const v=visitor();for(let i=0;i<RATE_LIMITS.runs.limit;i++)await v('/api/runs',{});assert.equal((await v('/api/leaderboard')).status,200);
+ resetProtectionState();
+});
+test('rate limit windows expire, unknown addresses share a larger bucket, and memory stays bounded',()=>{
+ resetProtectionState();const t=1_000_000_000_000,{limit,windowSeconds}=RATE_LIMITS.results;
+ for(let i=0;i<limit;i++)assert.equal(rateLimit('results','a',t),null);
+ assert.equal(rateLimit('results','a',t),windowSeconds);assert.equal(rateLimit('results','a',t+windowSeconds*1000-1500),2);
+ assert.equal(rateLimit('results','a',t+windowSeconds*1000),null);
+ for(let i=0;i<limit*UNKNOWN_CLIENT_MULTIPLIER;i++)assert.equal(rateLimit('results',null,t),null);assert.ok(rateLimit('results',null,t)>0);
+ for(let i=0;i<MAX_TRACKED_CLIENTS+50;i++)rateLimit('views','10.0.'+i,t);assert.ok(trackedClients('views')<=MAX_TRACKED_CLIENTS);
+ resetProtectionState();
+});
+test('starting a journey purges old unsubmitted runs at most once per interval',async()=>{
+ resetProtectionState();const now=nowSeconds(),old=now-UNSUBMITTED_RUN_TTL_SECONDS-60;
+ const insert=(id,started,submittedAt=null)=>sqlite.prepare('INSERT INTO runs (id,started_at,submitted_at,nickname,score,elapsed,retries) VALUES (?,?,?,?,?,?,?)').run(id,started,submittedAt,submittedAt?'Kept':null,submittedAt?20000:null,submittedAt?600:null,submittedAt?0:null);
+ insert('purge-old',old);insert('purge-recent',now-3600);insert('purge-submitted',old-86400,old);
+ const v=visitor();assert.equal((await v('/api/runs',{})).status,201);
+ const ids=()=>sqlite.prepare("SELECT id FROM runs WHERE id LIKE 'purge-%' ORDER BY id").all().map(r=>r.id);
+ assert.deepEqual(ids(),['purge-recent','purge-submitted']);
+ insert('purge-old-2',old);assert.equal((await v('/api/runs',{})).status,201);assert.ok(ids().includes('purge-old-2'),'second purge waits for the interval');
+ sqlite.prepare("DELETE FROM runs WHERE id LIKE 'purge-%'").run();resetProtectionState();
+});
+test('views count only requests that a browser marks as same-site',async()=>{
+ const count=()=>sqlite.prepare('SELECT count(*) n FROM page_views').get().n,v=visitor(),before=count();
+ let res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null});let data=await res.json();
+ assert.equal(res.status,200);assert.equal(data.counted,false);assert.equal(data.views,before);assert.equal(count(),before);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null,'sec-fetch-site':'cross-site'});assert.equal(res.status,403);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{'sec-fetch-site':'cross-site'});assert.equal(res.status,403);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null,'sec-fetch-site':'same-origin'});assert.equal(res.status,200);assert.equal(count(),before+1);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{'sec-fetch-site':'same-origin'});assert.equal((await res.json()).views,before+2);
+});
+test('admin removal tool lists matches as a dry run and deletes only with --confirm',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'odysseus-admin-')),file=path.join(dir,'ranking.sqlite');
+ try{
+  const db=new DatabaseSync(file);for(const f of fs.readdirSync('drizzle').filter(f=>f.endsWith('.sql')).sort())db.exec(fs.readFileSync('drizzle/'+f,'utf8'));
+  const add=db.prepare('INSERT INTO runs (id,started_at,submitted_at,nickname,score,elapsed,normal_kills,boss_kills,damage_taken,retries) VALUES (?,?,?,?,?,?,?,?,?,?)');
+  add.run('aaaaaaaa-0000-4000-8000-000000000001',1,2,'Cheater',32280,60,74,4,0,0);add.run('aaaaaaaa-0000-4000-8000-000000000002',1,3,'cheater',32000,61,74,4,0,0);
+  add.run('aaaaaaaa-0000-4000-8000-000000000003',1,4,'Hero',30000,600,72,4,100,1);db.close();
+  const tool=(...args)=>spawnSync(process.execPath,['admin-remove-run.mjs',...args],{encoding:'utf8'});
+  const left=()=>{const d=new DatabaseSync(file);try{return d.prepare('SELECT nickname FROM runs ORDER BY id').all().map(r=>r.nickname);}finally{d.close();}};
+  let out=tool('--db',file,'--nickname','  CHEATER ');assert.equal(out.status,0,out.stderr);
+  assert.match(out.stdout,/2 matching row/);assert.match(out.stdout,/score=32280/);assert.match(out.stdout,/Dry run: nothing was deleted/);assert.deepEqual(left(),['Cheater','cheater','Hero']);
+  out=tool('--db',file,'--nickname','Cheater','--confirm');assert.equal(out.status,0,out.stderr);assert.match(out.stdout,/Deleted 2 row/);assert.deepEqual(left(),['Hero']);
+  out=tool('--db',file,'--run','aaaaaaaa-0000-4000-8000-000000000003');assert.match(out.stdout,/1 matching row/);assert.deepEqual(left(),['Hero']);
+  out=tool('--db',file,'--run','aaaaaaaa-0000-4000-8000-000000000003','--confirm');assert.match(out.stdout,/Deleted 1 row/);assert.deepEqual(left(),[]);
+  // Live database: works from an owner snapshot and prints the statement instead of deleting.
+  const snapshot=path.join(dir,'runs.json');fs.writeFileSync(snapshot,JSON.stringify({complete:true,runs:[{id:'bbbbbbbb-0000-4000-8000-000000000001',nickname:'Cheater',score:32280}]}));
+  out=tool('--snapshot',snapshot,'--nickname','cheater','--confirm');assert.equal(out.status,0,out.stderr);assert.match(out.stdout,/DELETE FROM runs WHERE id IN \('bbbbbbbb-0000-4000-8000-000000000001'\);/);assert.match(out.stdout,/Nothing was deleted locally/);
+  assert.notEqual(tool('--db',file).status,0);assert.notEqual(tool('--db',file,'--run',"x' OR 1=1 --").status,0);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('ranking page explains rejected results, nickname refusals and busy limits',async()=>{
+ const els=new Map();const element=id=>{if(!els.has(id))els.set(id,{textContent:'',value:'Hero',hidden:false,disabled:false,children:[],events:{},addEventListener(k,f){this.events[k]=f;},appendChild(v){this.children.push(v);},replaceChildren(){this.children=[];}});return els.get(id);};
+ let reply=null;const v=visitor();
+ const ctx=vm.createContext({console,document:{getElementById:element,createElement:()=>({children:[],textContent:'',appendChild(c){this.children.push(c);}})},fetch:async(p,opts)=>reply&&p==='/api/results'?reply():v(p,opts?.body?JSON.parse(opts.body):undefined)});
+ vm.runInContext(fs.readFileSync('ranking.js','utf8'),ctx);await vm.runInContext('rankIdentityReady',ctx);
+ const finish=async(r)=>{await vm.runInContext('startRankRun();rankStarting',ctx);sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(nowSeconds()-1000,vm.runInContext('rankRunId',ctx));await vm.runInContext('finishRankRun('+JSON.stringify(r)+')',ctx);};
+ const submit=()=>element('rank-form').events.submit({preventDefault(){}});
+ await finish({...botRun,elapsed:60});await submit();
+ assert.match(element('rank-status').textContent,/faster than a real journey.*not ranked/);assert.equal(element('rank-form').hidden,true);
+ await finish(botRun);element('rank-name').value='Adm1n';await submit();
+ assert.match(element('rank-status').textContent,/reserved/);assert.equal(element('rank-form').hidden,false);assert.equal(element('rank-save').disabled,false);
+ reply=()=>new Response(JSON.stringify({error:'busy',code:'rate_limited',retryAfter:42}),{status:429,headers:{'content-type':'application/json','retry-after':'42'}});
+ await submit();assert.match(element('rank-status').textContent,/wait 42 seconds/);assert.equal(element('rank-form').hidden,false);assert.equal(element('rank-save').disabled,false);
+ reply=null;element('rank-name').value='Sea Wanderer';await submit();assert.match(element('rank-status').textContent,/Saved!/);
 });
