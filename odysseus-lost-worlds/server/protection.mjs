@@ -1,4 +1,5 @@
-// Ranking protection: result plausibility checks.
+// Ranking protection: result plausibility checks, best-effort rate limits and
+// clean-up of journeys that were started but never submitted.
 
 // ---- Facts taken from the game data (game.js) ------------------------------
 // LEVELS: wave stages G1 (3 waves), E1, E2, E3 (2 waves each) and FINAL ACT
@@ -53,3 +54,68 @@ export function checkPlausibility(r,age){
   return reject(422,'impossible_result','This result reports a retry without the damage needed to fall, so it was not ranked.');
  return null;
 }
+
+// ---- Rate limits (best effort) ---------------------------------------------
+// Counted in this server instance's memory only. A host that runs several
+// instances keeps separate counts, and counts reset when an instance restarts.
+// A platform-level rate rule is stronger if the host offers one.
+export const RATE_LIMITS=Object.freeze({
+ runs:{limit:30,windowSeconds:600},           // new journeys: one every 20 s on average
+ results:{limit:20,windowSeconds:600},        // ranking submissions
+ views:{limit:60,windowSeconds:600},          // page-view counts
+ telemetryStart:{limit:30,windowSeconds:600}, // optional analytics: journey start
+ telemetryEvents:{limit:300,windowSeconds:600}, // optional analytics: event batches
+});
+// Requests without a known client address share one bucket with a higher limit.
+export const UNKNOWN_CLIENT_MULTIPLIER=10;
+// At most this many addresses are tracked per limit; oldest entries are dropped first.
+export const MAX_TRACKED_CLIENTS=5000;
+const buckets=new Map();
+
+// Cloudflare sets cf-connecting-ip and clients cannot override it. Other proxies
+// append the address they saw to x-forwarded-for, so the last entry is used.
+export function clientAddress(request){
+ const forwarded=request.headers.get('x-forwarded-for')?.split(',').map(v=>v.trim()).filter(Boolean).at(-1);
+ const value=(request.headers.get('cf-connecting-ip')||request.headers.get('x-real-ip')||forwarded||'').trim();
+ return value?value.slice(0,64):null;
+}
+// Returns null when allowed, or the number of seconds to wait.
+export function rateLimit(name,address,now=Date.now()){
+ const rule=RATE_LIMITS[name];if(!rule)return null;
+ let table=buckets.get(name);if(!table)buckets.set(name,table=new Map());
+ const key=address||'unknown',limit=address?rule.limit:rule.limit*UNKNOWN_CLIENT_MULTIPLIER,windowMs=rule.windowSeconds*1000;
+ let entry=table.get(key);
+ if(!entry||now-entry.start>=windowMs){
+  table.delete(key);
+  if(table.size>=MAX_TRACKED_CLIENTS){
+   for(const [k,v] of table)if(now-v.start>=windowMs)table.delete(k);
+   for(const k of table.keys()){if(table.size<MAX_TRACKED_CLIENTS)break;table.delete(k);}
+  }
+  entry={start:now,count:0};table.set(key,entry);
+ }
+ if(entry.count>=limit)return Math.max(1,Math.ceil((entry.start+windowMs-now)/1000));
+ entry.count++;return null;
+}
+export function rateLimitedResponse(retryAfter){
+ return new Response(JSON.stringify({error:'Too many requests from this connection. Please wait '+retryAfter+' seconds and try again.',code:'rate_limited',retryAfter}),
+  {status:429,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','retry-after':String(retryAfter)}});
+}
+export function trackedClients(name){return buckets.get(name)?.size||0;}
+
+// ---- Clean-up of unsubmitted journeys --------------------------------------
+// A journey row is created when a game starts and stays empty until a result is
+// saved. Rows still empty after 24 hours are deleted, at most once every
+// 10 minutes per instance, when a new journey is created. A run paused for more
+// than 24 hours can therefore no longer be ranked.
+export const UNSUBMITTED_RUN_TTL_SECONDS=24*3600;
+export const PURGE_INTERVAL_SECONDS=600;
+let lastPurge=-Infinity;
+export async function purgeUnsubmittedRuns(db,now){
+ if(now-lastPurge<PURGE_INTERVAL_SECONDS)return false;
+ lastPurge=now;
+ try{await db.prepare('DELETE FROM runs WHERE submitted_at IS NULL AND started_at < ?').bind(now-UNSUBMITTED_RUN_TTL_SECONDS).run();return true;}
+ catch(error){console.error('Run clean-up failed',error instanceof Error?error.message:'Unknown error');return false;}
+}
+
+// For tests: forget all counters and the last clean-up time.
+export function resetProtectionState(){buckets.clear();lastPurge=-Infinity;}

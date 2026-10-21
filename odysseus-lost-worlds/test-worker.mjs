@@ -94,7 +94,7 @@ test('simultaneous view retries count a page once; separate page loads each coun
 });
 test('view display recovers a lost response without double counting and translates labels',async()=>{
  const before=sqlite.prepare('SELECT count(*) n FROM page_views').get().n,els=new Map(),el=id=>{if(!els.has(id))els.set(id,{textContent:''});return els.get(id);};let loseResponse=true;
- const ctx=vm.createContext({console,crypto,controlLanguage:'en',document:{getElementById:el},fetch:async(path,opts)=>{const response=await rawApi(new Request('https://game.example'+path,opts),env);if(loseResponse)throw Error('Lost response');return response;}});
+ const ctx=vm.createContext({console,crypto,controlLanguage:'en',document:{getElementById:el},fetch:async(path,opts)=>{const response=await rawApi(new Request('https://game.example'+path,{...opts,headers:{...opts.headers,origin:'https://game.example'}}),env);if(loseResponse)throw Error('Lost response');return response;}});
  vm.runInContext(fs.readFileSync('views.js','utf8'),ctx);await vm.runInContext('pageViewsLoading',ctx);
  assert.equal(el('site-views').textContent,'Retry views');assert.equal(el('site-views').disabled,false);
  assert.equal(sqlite.prepare('SELECT count(*) n FROM page_views').get().n,before+1);
@@ -107,9 +107,10 @@ test('unavailable view storage returns an error instead of a fabricated count',a
 });
 
 // ---- Ranking protection ------------------------------------------------------
-import {MIN_PLAUSIBLE_ELAPSED_SECONDS,CLOCK_TOLERANCE_SECONDS,checkPlausibility} from './server/protection.mjs';
+import {RATE_LIMITS,UNKNOWN_CLIENT_MULTIPLIER,MAX_TRACKED_CLIENTS,MIN_PLAUSIBLE_ELAPSED_SECONDS,CLOCK_TOLERANCE_SECONDS,UNSUBMITTED_RUN_TTL_SECONDS,checkPlausibility,rateLimit,trackedClients,resetProtectionState} from './server/protection.mjs';
 import {checkNickname,normalizeNickname} from './server/nickname.mjs';
 const nowSeconds=()=>Math.floor(Date.now()/1000);
+// Each protection test uses its own client address so rate limits do not leak between tests.
 let address=0;
 function visitor(){
  const ip='198.51.100.'+(++address);let jar='';
@@ -173,4 +174,46 @@ test('nicknames are normalised, filtered for abuse and look-alikes, and saved cl
   runId=await runStartedAgo(v,1000);const res=await v('/api/results',{...botRun,runId,nickname});const data=await res.json();
   assert.equal(res.status,400);assert.equal(data.code,code);assert.ok(data.error);assert.equal(submitted(runId),null);
  }
+});
+test('each write endpoint has a per-address limit with 429 and Retry-After',async()=>{
+ resetProtectionState();
+ const calls={runs:v=>v('/api/runs',{}),results:v=>v('/api/results',{runId:'bad'}),views:v=>v('/api/views',{pageId:crypto.randomUUID()}),telemetryStart:v=>v('/api/telemetry/start',{}),telemetryEvents:v=>v('/api/telemetry/events',{})};
+ for(const [name,call] of Object.entries(calls)){
+  const v=visitor(),{limit,windowSeconds}=RATE_LIMITS[name];
+  for(let i=0;i<limit;i++)assert.notEqual((await call(v)).status,429,name+' request '+(i+1));
+  const res=await call(v),data=await res.json(),wait=Number(res.headers.get('retry-after'));
+  assert.equal(res.status,429,name);assert.equal(data.code,'rate_limited');assert.ok(Number.isInteger(wait)&&wait>=1&&wait<=windowSeconds,name+' Retry-After '+wait);assert.equal(data.retryAfter,wait);
+  assert.notEqual((await call(visitor())).status,429,name+' other address');
+ }
+ // GET requests are not limited.
+ const v=visitor();for(let i=0;i<RATE_LIMITS.runs.limit;i++)await v('/api/runs',{});assert.equal((await v('/api/leaderboard')).status,200);
+ resetProtectionState();
+});
+test('rate limit windows expire, unknown addresses share a larger bucket, and memory stays bounded',()=>{
+ resetProtectionState();const t=1_000_000_000_000,{limit,windowSeconds}=RATE_LIMITS.results;
+ for(let i=0;i<limit;i++)assert.equal(rateLimit('results','a',t),null);
+ assert.equal(rateLimit('results','a',t),windowSeconds);assert.equal(rateLimit('results','a',t+windowSeconds*1000-1500),2);
+ assert.equal(rateLimit('results','a',t+windowSeconds*1000),null);
+ for(let i=0;i<limit*UNKNOWN_CLIENT_MULTIPLIER;i++)assert.equal(rateLimit('results',null,t),null);assert.ok(rateLimit('results',null,t)>0);
+ for(let i=0;i<MAX_TRACKED_CLIENTS+50;i++)rateLimit('views','10.0.'+i,t);assert.ok(trackedClients('views')<=MAX_TRACKED_CLIENTS);
+ resetProtectionState();
+});
+test('starting a journey purges old unsubmitted runs at most once per interval',async()=>{
+ resetProtectionState();const now=nowSeconds(),old=now-UNSUBMITTED_RUN_TTL_SECONDS-60;
+ const insert=(id,started,submittedAt=null)=>sqlite.prepare('INSERT INTO runs (id,started_at,submitted_at,nickname,score,elapsed,retries) VALUES (?,?,?,?,?,?,?)').run(id,started,submittedAt,submittedAt?'Kept':null,submittedAt?20000:null,submittedAt?600:null,submittedAt?0:null);
+ insert('purge-old',old);insert('purge-recent',now-3600);insert('purge-submitted',old-86400,old);
+ const v=visitor();assert.equal((await v('/api/runs',{})).status,201);
+ const ids=()=>sqlite.prepare("SELECT id FROM runs WHERE id LIKE 'purge-%' ORDER BY id").all().map(r=>r.id);
+ assert.deepEqual(ids(),['purge-recent','purge-submitted']);
+ insert('purge-old-2',old);assert.equal((await v('/api/runs',{})).status,201);assert.ok(ids().includes('purge-old-2'),'second purge waits for the interval');
+ sqlite.prepare("DELETE FROM runs WHERE id LIKE 'purge-%'").run();resetProtectionState();
+});
+test('views count only requests that a browser marks as same-site',async()=>{
+ const count=()=>sqlite.prepare('SELECT count(*) n FROM page_views').get().n,v=visitor(),before=count();
+ let res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null});let data=await res.json();
+ assert.equal(res.status,200);assert.equal(data.counted,false);assert.equal(data.views,before);assert.equal(count(),before);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null,'sec-fetch-site':'cross-site'});assert.equal(res.status,403);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{'sec-fetch-site':'cross-site'});assert.equal(res.status,403);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{origin:null,'sec-fetch-site':'same-origin'});assert.equal(res.status,200);assert.equal(count(),before+1);
+ res=await v('/api/views',{pageId:crypto.randomUUID()},{'sec-fetch-site':'same-origin'});assert.equal((await res.json()).views,before+2);
 });
