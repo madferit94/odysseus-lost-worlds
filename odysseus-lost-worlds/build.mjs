@@ -9,7 +9,11 @@ for(const file of ['index.html','display.css','display.js','game.js','art.js','g
 }
 const config=JSON.parse(fs.readFileSync('.openai/hosting.json','utf8'));if(config.static||config.d1!=='DB')throw Error('Worker configuration required');
 fs.rmSync(out,{recursive:true,force:true});fs.mkdirSync(path.join(out,'server'),{recursive:true});fs.mkdirSync(path.join(out,'.openai'),{recursive:true});
-fs.writeFileSync(path.join(out,'server/index.js'),'const ASSET_MAP='+JSON.stringify(assets)+';\n'+fs.readFileSync('server/telemetry.mjs','utf8')+'\n'+fs.readFileSync('server/worker.mjs','utf8').replace("import {telemetryApi} from './telemetry.mjs';",''));
+// Server modules are joined into one file in dependency order; local imports are removed.
+const serverModules=['server/nickname-blocklist.mjs','server/nickname.mjs','server/telemetry.mjs','server/worker.mjs'];
+const serverSource=serverModules.map(file=>fs.readFileSync(file,'utf8').replace(/^import \{[^}]*\} from '\.\/[\w-]+\.mjs';\n/gm,'')).join('\n');
+if(/^import /m.test(serverSource))throw Error('Unbundled import left in server code');
+fs.writeFileSync(path.join(out,'server/index.js'),'const ASSET_MAP='+JSON.stringify(assets)+';\n'+serverSource);
 fs.copyFileSync('.openai/hosting.json',path.join(out,'.openai/hosting.json'));
 fs.cpSync('drizzle',path.join(out,'.openai/drizzle'),{recursive:true});
 console.log('Built game, ranking Worker, and database migrations.');

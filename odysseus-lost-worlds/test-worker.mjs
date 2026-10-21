@@ -105,3 +105,32 @@ test('view display recovers a lost response without double counting and translat
 test('unavailable view storage returns an error instead of a fabricated count',async()=>{
  const response=await rawApi(request('/api/views'),{});assert.equal(response.status,503);const data=await response.json();assert.equal(data.views,undefined);assert.match(data.error,/Views are temporarily unavailable/);
 });
+
+// ---- Ranking protection ------------------------------------------------------
+import {checkNickname,normalizeNickname} from './server/nickname.mjs';
+const nowSeconds=()=>Math.floor(Date.now()/1000);
+let address=0;
+function visitor(){
+ const ip='198.51.100.'+(++address);let jar='';
+ return async(path,data,headers={})=>{const req=request(path,data);req.headers.set('cf-connecting-ip',ip);for(const [k,v] of Object.entries(headers))v===null?req.headers.delete(k):req.headers.set(k,v);if(jar)req.headers.set('cookie',jar);const res=await rawApi(req,env);const next=res.headers.get('set-cookie');if(next)jar=next.split(';')[0];return res;};
+}
+async function runStartedAgo(v,seconds){const {runId}=await (await v('/api/runs',{})).json();sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(nowSeconds()-seconds,runId);return runId;}
+const submitted=id=>sqlite.prepare('SELECT submitted_at FROM runs WHERE id=?').get(id)?.submitted_at??null;
+// Realistic values produced by the game's own code (see test-plausibility.mjs).
+const botRun={completed:true,normalKills:73,bossKills:4,damageTaken:185,retries:0,elapsed:175};
+
+test('nicknames are normalised, filtered for abuse and look-alikes, and saved clean',async()=>{
+ assert.equal(normalizeNickname('  Ｈｅｒｏ   of\tTroy '),'Hero of Troy');assert.equal(normalizeNickname('ㅋㅋ왕'),'ㅋㅋ왕');
+ for(const name of ['Admin','admin01','ADM1N','4dmin','Game Admin','운영자','게임관리자','Odysseus','0dysseus','SYSTEM','Moderator','ѕуѕтем'])assert.equal(checkNickname(name).code,'nickname_reserved',name);
+ for(const name of ['fuck','F.u.C.k','FuuuCK','sh1t','씨발','ㅅㅂ','병신아','tlqkf','Dick'])assert.equal(checkNickname(name).code,'nickname_blocked',name);
+ for(const name of ['Hеro','аdmin','Ηero'])assert.equal(checkNickname(name).code,'nickname_mixed_script',name);
+ for(const name of ['<b>x</b>','','x'.repeat(17),'a​b'])assert.equal(checkNickname(name).code,'nickname_format',name);
+ for(const name of ['Hero','오디세우스','Badminton','Dickens','Nigeria','시발점','Привет','김민수Kim','Hero_1.0-a'])assert.equal(checkNickname(name).nickname,name,name);
+ const v=visitor();
+ let runId=await runStartedAgo(v,1000);const saved=await v('/api/results',{...botRun,runId,nickname:'  Ｓｅａ   Ｗａｎｄｅｒｅｒ  '});assert.equal(saved.status,200);
+ assert.equal(sqlite.prepare('SELECT nickname FROM runs WHERE id=?').get(runId).nickname,'Sea Wanderer');
+ for(const [nickname,code] of [['Adm1n','nickname_reserved'],['씨발','nickname_blocked'],['Hеro','nickname_mixed_script']]){
+  runId=await runStartedAgo(v,1000);const res=await v('/api/results',{...botRun,runId,nickname});const data=await res.json();
+  assert.equal(res.status,400);assert.equal(data.code,code);assert.ok(data.error);assert.equal(submitted(runId),null);
+ }
+});
