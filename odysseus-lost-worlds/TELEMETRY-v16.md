@@ -16,7 +16,7 @@ Play analytics was added in v16 and only measures play. It does not change diffi
 
 | Event | When it is recorded |
 |---|---|
-| game_start | A new journey starts, or (from v19) a journey continues from a saved checkpoint. Difficulty, build version (the current game sends `v19`; the server also accepts `v16` to `v18`), source category, test flag and `mode` are stored in `play_sessions`. `mode` is `normal` for a new journey and `continue` for a continued one; sessions from before v19 are all `normal`. In a `continue` session, `game_start` carries the restored stage, lives, energy and counters, and `active_ms` counts only that session |
+| game_start | A new journey starts, or (from v19) a journey continues from a saved checkpoint. Difficulty, build version (the current game sends `v19`; the server also accepts `v16` to `v18`), source category, test flag and `mode` are stored in `play_sessions`. `mode` is `normal` for a new journey, `continue` for a continued one and `practice` for a boss practice (it starts at the boss stage and ends with `game_clear` on a win or `game_over` on a loss); sessions from before v19 are all `normal`. In a `continue` session, `game_start` carries the restored stage, lives, energy and counters, and `active_ms` counts only that session |
 | stage_start | Entering a stage or continuing after a death. `attempt` counts tries at that stage, starting from 0 |
 | stage_complete | A battle ends, the prologue is passed or the epilogue finishes; recorded once per attempt |
 | player_death / retry | HP reaches 0 / the journey actually continues with a remaining life |

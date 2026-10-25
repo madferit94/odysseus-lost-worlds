@@ -11,6 +11,7 @@ This folder holds the browser game and its server code. For what the game is and
 | `index.html`, `display.css` | Game page and its layout |
 | `game.js` and the other `*.js` files | Movement, combat, bosses, finishers, screen display, rankings, page views and optional play analytics |
 | `checkpoint.js` | v19 Continue: saves a checkpoint in this browser at each stage and restores it |
+| `practice.js` | v19 Boss practice: remembers beaten bosses and runs a single boss fight |
 | `display.js` | v17 toolbar: fullscreen, collapsible controls guide, language and sound buttons |
 | `assets/` | Game images |
 | `server/worker.mjs` | Server for online rankings (one board per difficulty from v18) and page views |
@@ -40,6 +41,15 @@ node build.mjs    # writes the deployable game and server to dist/
 ```
 
 `npm test` does not need `npm install`. `dist/` is a build output and is not stored in Git. `node build.mjs` reads `.openai/hosting.json`, which points to the existing hosted project; deploying from another account needs its own project and database.
+
+## Boss practice (v19)
+
+`practice.js` remembers in `localStorage` (key `odysseus-bosses-beaten-v1`) every boss this browser has defeated, on any journey. The Boss practice menu lists the four bosses; ones not yet beaten are locked, and with none beaten the menu explains how to unlock them.
+
+- A practice starts the boss stage through `enter()` on the difficulty selected in the picker, with the state a hero has on arrival: maximum HP 100 + 20 for each earlier boss, those bosses' blessings, the stage's attack bonus, weapon 1, no energy and one life.
+- It ends when the boss falls (no cut-scene or next stage follows) or at the first fall. The menu then shows victory or defeat, the boss, the difficulty and the game time, and stays open for another try.
+- **Not ranked, checkpoint untouched.** A practice never starts a ranking run, drops any run this page started earlier, and is refused by the server if marked as practice. `checkpoint.js` saves only for new and continued journeys, so a practice never writes or deletes the Continue checkpoint.
+- Optional analytics: a practice is its own session with `mode` = `practice`; a win ends with `game_clear`, a loss with `game_over`.
 
 ## Continue from a checkpoint (v19)
 
