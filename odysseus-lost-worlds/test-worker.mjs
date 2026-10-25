@@ -317,3 +317,58 @@ test('rows saved before v18 are listed only as earlier records; the old request 
  assert.equal((await board(v,'legacy')).myBest.nickname,'Stale Tab');const wrath=await board(v,'wrath');assert.equal(wrath.myBest,null);assert.ok(!wrath.entries.some(r=>r.nickname==='Stale Tab'));
  sqlite.prepare("DELETE FROM runs WHERE id IN ('legacy-v17-row','legacy-v18-row')").run();
 });
+
+// ---- Ranking page: difficulty tabs (v18) --------------------------------------
+function rankingPage({selected='aegean',language}={}){
+ const els=new Map(),requests=[],v=visitor();
+ const element=id=>{if(!els.has(id))els.set(id,{id,textContent:'',value:'Tab Hero',hidden:false,disabled:false,children:[],events:{},attributes:{},className:'',
+  setAttribute(k,val){this.attributes[k]=String(val);},getAttribute(k){return this.attributes[k]??null;},addEventListener(k,f){this.events[k]=f;},appendChild(c){this.children.push(c);},replaceChildren(){this.children=[];}});return els.get(id);};
+ const DIFFICULTIES=Object.fromEntries(RANK_DIFFICULTIES.map(id=>[id,{ko:id,en:id,levelKo:id,levelEn:id}]));
+ const ctx=vm.createContext({console,muted:false,state:'title',DIFFICULTIES,selectedDifficulty:selected,runDifficulty:selected,
+  document:{getElementById:element,createElement:()=>({children:[],textContent:'',appendChild(c){this.children.push(c);}})},
+  fetch:async(p,opts)=>{requests.push({path:p,body:opts?.body?JSON.parse(opts.body):undefined});return v(p,opts?.body?JSON.parse(opts.body):undefined);}});
+ // Same order as index.html: ui.js (language, difficulty picker) before ranking.js.
+ vm.runInContext(fs.readFileSync('ui.js','utf8'),ctx);if(language)vm.runInContext("controlLanguage='"+language+"'",ctx);
+ vm.runInContext(fs.readFileSync('ranking.js','utf8'),ctx);
+ const pressed=()=>['ithaca','aegean','trial','wrath','legacy'].filter(id=>element('rank-tab-'+id).getAttribute('aria-pressed')==='true');
+ return {ctx,el:element,requests,pressed,run:s=>vm.runInContext(s,ctx),boards:()=>requests.filter(r=>r.path.startsWith('/api/leaderboard')).map(r=>r.path.split('=')[1])};
+}
+test('index.html has five keyboard-usable ranking tabs in a labelled group',()=>{
+ const html=fs.readFileSync('index.html','utf8'),group=html.match(/<div id="rank-tabs"[^>]*>(.*?)<\/div>/)?.[0];
+ assert.ok(group,'tab group exists');assert.match(group,/role="group"/);assert.match(group,/aria-label="Rankings by difficulty"/);
+ const buttons=[...group.matchAll(/<button id="rank-tab-(\w+)"([^>]*)>([^<]+)<\/button>/g)];
+ assert.deepEqual(buttons.map(b=>b[1]),['ithaca','aegean','trial','wrath','legacy']);
+ for(const b of buttons){assert.match(b[2],/type="button"/);assert.match(b[2],/aria-pressed="(true|false)"/);assert.match(b[2],/aria-controls="rank-rows"/);}
+ assert.equal(buttons.filter(b=>/aria-pressed="true"/.test(b[2])).map(b=>b[1]).join(),'aegean');
+ // Narrow screens: tabs wrap (two per row at 390px) instead of overflowing the page.
+ assert.match(html,/\.rank-tabs\{display:flex;flex-wrap:wrap;[^}]*\}/);assert.match(html,/\.rankings \.rank-tab\{flex:1 1 150px;min-width:0;[^}]*white-space:normal/);
+ assert.doesNotMatch(html,/All difficulties currently share one ranking/);
+});
+test('ranking tabs open on the selected difficulty, switch boards and follow the page language',async()=>{
+ const page=rankingPage({selected:'trial'});await page.run('rankIdentityReady');
+ assert.deepEqual(page.pressed(),['trial']);assert.deepEqual(page.boards(),['trial']);
+ assert.equal(page.el('rank-tab-wrath').textContent,'POSEIDON’S WRATH · EXTREME');assert.equal(page.el('rank-tab-legacy').textContent,'Earlier records (before difficulty split)');
+ await page.el('rank-tab-wrath').onclick();assert.deepEqual(page.pressed(),['wrath']);assert.equal(page.boards().at(-1),'wrath');
+ await page.el('rank-tab-legacy').onclick();assert.deepEqual(page.pressed(),['legacy']);assert.match(page.el('rank-load').textContent,/before v18/);
+ // Choosing a difficulty for the next journey shows that difficulty's board.
+ assert.equal(page.run("selectDifficulty('ithaca')"),true);await page.run('rankIdentityReady');await new Promise(r=>setImmediate(r));
+ assert.deepEqual(page.pressed(),['ithaca']);assert.equal(page.boards().at(-1),'ithaca');
+ page.run("setControlLanguage('ko')");
+ assert.equal(page.el('rank-tab-ithaca').textContent,'이타카의 길 · 쉬움');assert.equal(page.el('rank-tab-wrath').textContent,'포세이돈의 분노 · 최상');
+ assert.equal(page.el('rank-tab-legacy').textContent,'이전 기록 (난이도 구분 전)');assert.equal(page.el('rank-tabs').getAttribute('aria-label'),'난이도별 순위');assert.equal(page.el('rank-tab-ithaca').lang,'ko');
+ assert.deepEqual(page.pressed(),['ithaca'],'language change keeps the board');
+ page.run("setControlLanguage('en')");assert.equal(page.el('rank-tab-ithaca').textContent,'ITHACA’S PATH · EASY');
+ const korean=rankingPage({language:'ko'});await korean.run('rankIdentityReady');assert.deepEqual(korean.pressed(),['aegean']);assert.equal(korean.el('rank-tab-aegean').textContent,'에게해의 항해 · 보통');
+});
+test('after a journey the page shows the board of the difficulty it was started with',async()=>{
+ const page=rankingPage({selected:'wrath'});await page.run('rankIdentityReady');
+ await page.run('startRankRun();rankStarting');const start=page.requests.find(r=>r.path==='/api/runs');assert.deepEqual(start.body,{difficulty:'wrath'});
+ const runId=page.run('rankRunId');assert.equal(storedDifficulty(runId),'wrath');sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(nowSeconds()-1000,runId);
+ // The player looked at another board during the journey, and the picker changed for the next game.
+ await page.el('rank-tab-ithaca').onclick();page.run("selectedDifficulty='trial'");
+ await page.run('finishRankRun('+JSON.stringify(botRun)+')');assert.deepEqual(page.pressed(),['wrath']);assert.equal(page.el('rank-form').hidden,false);
+ await page.el('rank-form').events.submit({preventDefault(){}});assert.match(page.el('rank-status').textContent,/Saved!/);
+ const sent=page.requests.find(r=>r.path==='/api/results');assert.equal(sent.body.difficulty,undefined,'the result carries no difficulty');
+ assert.deepEqual(page.pressed(),['wrath']);assert.equal(page.boards().at(-1),'wrath');
+ assert.ok(page.el('rank-rows').children.some(row=>row.children[1].textContent==='Tab Hero (ME)'));assert.match(page.el('rank-personal').textContent,/My best: #\d+/);
+});
