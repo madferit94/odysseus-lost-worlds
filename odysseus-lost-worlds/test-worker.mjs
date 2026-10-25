@@ -255,3 +255,65 @@ test('ranking page explains rejected results, nickname refusals and busy limits'
  await submit();assert.match(element('rank-status').textContent,/wait 42 seconds/);assert.equal(element('rank-form').hidden,false);assert.equal(element('rank-save').disabled,false);
  reply=null;element('rank-name').value='Sea Wanderer';await submit();assert.match(element('rank-status').textContent,/Saved!/);
 });
+
+// ---- Per-difficulty rankings (v18) -------------------------------------------
+import {RANK_DIFFICULTIES} from './server/worker.mjs';
+async function startOn(v,difficulty,ago=1000){const res=await v('/api/runs',difficulty===undefined?{}:{difficulty});assert.equal(res.status,201);const data=await res.json();sqlite.prepare('UPDATE runs SET started_at=? WHERE id=?').run(nowSeconds()-ago,data.runId);return data;}
+const board=async(v,difficulty)=>{const res=await v('/api/leaderboard'+(difficulty?'?difficulty='+difficulty:''));assert.equal(res.status,200);return res.json();};
+const storedDifficulty=id=>sqlite.prepare('SELECT difficulty FROM runs WHERE id=?').get(id).difficulty;
+
+test('the migration only adds a difficulty column and index to runs',()=>{
+ const columns=sqlite.prepare('PRAGMA table_info(runs)').all().map(c=>c.name);
+ assert.deepEqual(columns,['id','started_at','submitted_at','nickname','score','elapsed','normal_kills','boss_kills','damage_taken','retries','player_key','difficulty']);
+ assert.equal(sqlite.prepare('PRAGMA table_info(runs)').all().find(c=>c.name==='difficulty').notnull,0);
+ assert.ok(sqlite.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='runs'").all().some(i=>i.name==='idx_runs_difficulty_ranking'));
+ assert.deepEqual([...RANK_DIFFICULTIES],['ithaca','aegean','trial','wrath']);
+});
+test('a ranking entry keeps the difficulty its journey was started with',async()=>{
+ const v=visitor(),started=await startOn(v,'trial');assert.equal(started.difficulty,'trial');assert.equal(storedDifficulty(started.runId),'trial');
+ // The result claims another difficulty; the run-start record decides.
+ const res=await v('/api/results',{...botRun,runId:started.runId,nickname:'Trial Hero',difficulty:'ithaca'}),data=await res.json();
+ assert.equal(res.status,200);assert.equal(data.difficulty,'trial');assert.equal(data.score,scoreRun(botRun).total);assert.equal(storedDifficulty(started.runId),'trial');
+ assert.ok((await board(v,'trial')).entries.some(r=>r.nickname==='Trial Hero'&&r.difficulty==='trial'&&r.is_me===1));
+ assert.ok(!(await board(v,'ithaca')).entries.some(r=>r.nickname==='Trial Hero'));
+ // Re-sending the saved result with yet another difficulty changes nothing.
+ const again=await (await v('/api/results',{...botRun,runId:started.runId,nickname:'Trial Hero',difficulty:'wrath'})).json();
+ assert.equal(again.alreadySaved,true);assert.equal(again.difficulty,'trial');assert.equal(storedDifficulty(started.runId),'trial');
+});
+test('each difficulty board lists only its own runs, with its own ranks and personal best',async()=>{
+ const v=visitor(),scores={};
+ for(const [i,difficulty] of RANK_DIFFICULTIES.entries()){
+  const {runId}=await startOn(v,difficulty),r={...botRun,elapsed:300+i*10};scores[difficulty]=scoreRun(r).total;
+  assert.equal((await v('/api/results',{...r,runId,nickname:'Board '+difficulty})).status,200);
+ }
+ for(const difficulty of RANK_DIFFICULTIES){
+  const data=await board(v,difficulty);assert.equal(data.difficulty,difficulty);
+  assert.ok(data.entries.every(r=>r.difficulty===difficulty),difficulty);assert.ok(data.entries.length<=20);
+  assert.deepEqual(data.entries.filter(r=>r.nickname.startsWith('Board ')).map(r=>r.nickname),['Board '+difficulty]);
+  assert.equal(data.entries[0].rank,1);assert.equal(data.myBest.difficulty,difficulty);assert.equal(data.myBest.score,scores[difficulty]);
+ }
+});
+test('unknown difficulties are refused when a journey starts and when a board is requested',async()=>{
+ const v=visitor(),before=sqlite.prepare('SELECT count(*) n FROM runs').get().n;
+ for(const difficulty of ['nightmare','EASY','legacy','',1,true,['trial'],{}]){
+  const res=await v('/api/runs',{difficulty});assert.equal(res.status,400,JSON.stringify(difficulty));assert.equal((await res.json()).code,'invalid_difficulty');
+ }
+ assert.equal(sqlite.prepare('SELECT count(*) n FROM runs').get().n,before);
+ for(const query of ['nightmare','',"aegean' OR 1=1 --",'Aegean']){const res=await v('/api/leaderboard?difficulty='+encodeURIComponent(query));assert.equal(res.status,400,query);assert.equal((await res.json()).code,'invalid_difficulty');}
+});
+test('rows saved before v18 are listed only as earlier records; the old request shape still works',async()=>{
+ const v=visitor(),now=nowSeconds();
+ // A row as stored by v17: no difficulty column value.
+ sqlite.prepare('INSERT INTO runs (id,started_at,submitted_at,nickname,score,elapsed,normal_kills,boss_kills,damage_taken,retries) VALUES (?,?,?,?,?,?,?,?,?,?)').run('legacy-v17-row',now-5000,now-4000,'Old Sailor',60000,500,74,4,0,0);
+ sqlite.prepare('INSERT INTO runs (id,started_at,submitted_at,nickname,score,elapsed,retries,difficulty) VALUES (?,?,?,?,?,?,?,?)').run('legacy-v18-row',now-5000,now-4000,'New Sailor',59000,500,0,'wrath');
+ const legacy=await board(v,'legacy');assert.equal(legacy.difficulty,'legacy');assert.equal(legacy.entries[0].nickname,'Old Sailor');assert.equal(legacy.entries[0].difficulty,null);
+ assert.ok(legacy.entries.every(r=>r.difficulty===null));
+ for(const difficulty of RANK_DIFFICULTIES)assert.ok(!(await board(v,difficulty)).entries.some(r=>r.nickname==='Old Sailor'),difficulty);
+ // A page from before v18 asks without a parameter and gets the combined list in the old shape.
+ const combined=await board(v);assert.deepEqual(Object.keys(combined),['entries','myBest']);assert.deepEqual(combined.entries.slice(0,2).map(r=>[r.nickname,r.difficulty]),[['Old Sailor',null],['New Sailor','wrath']]);
+ // A journey started by an old page (no difficulty) is not guessed into a difficulty board.
+ const old=await startOn(v);assert.equal(old.difficulty,null);
+ const saved=await (await v('/api/results',{...botRun,runId:old.runId,nickname:'Stale Tab',difficulty:'wrath'})).json();assert.equal(saved.difficulty,null);
+ assert.equal((await board(v,'legacy')).myBest.nickname,'Stale Tab');const wrath=await board(v,'wrath');assert.equal(wrath.myBest,null);assert.ok(!wrath.entries.some(r=>r.nickname==='Stale Tab'));
+ sqlite.prepare("DELETE FROM runs WHERE id IN ('legacy-v17-row','legacy-v18-row')").run();
+});
