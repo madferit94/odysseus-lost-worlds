@@ -2,7 +2,7 @@
 
 **English** · [한국어](TELEMETRY-v16.ko.md)
 
-Play analytics was added in v16 and only measures play. It does not change difficulty, damage, lives, heal zones or finisher numbers. The current game (v17) uses the same events and fields; only the version label it records is `v17`.
+Play analytics was added in v16 and only measures play. It does not change difficulty, damage, lives, heal zones or finisher numbers. The current game (v18) uses the same events and fields; only the version label it records is `v18`.
 
 ## Player choice
 
@@ -16,7 +16,7 @@ Play analytics was added in v16 and only measures play. It does not change diffi
 
 | Event | When it is recorded |
 |---|---|
-| game_start | A new journey starts. Difficulty, build version (the current game sends `v17`; the server also accepts `v16`), source category and test flag are stored in `play_sessions` |
+| game_start | A new journey starts. Difficulty, build version (the current game sends `v18`; the server also accepts `v16` and `v17`), source category and test flag are stored in `play_sessions` |
 | stage_start | Entering a stage or continuing after a death. `attempt` counts tries at that stage, starting from 0 |
 | stage_complete | A battle ends, the prologue is passed or the epilogue finishes; recorded once per attempt |
 | player_death / retry | HP reaches 0 / the journey actually continues with a remaining life |
