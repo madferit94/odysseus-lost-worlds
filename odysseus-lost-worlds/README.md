@@ -42,12 +42,12 @@ node build.mjs    # writes the deployable game and server to dist/
 
 ## Rankings by difficulty (v18)
 
-Each difficulty has its own ranking board. The page shows four tabs plus "Earlier records".
+Each difficulty has its own ranking board. The page shows four tabs plus "Earlier records" (results with no recorded difficulty).
 
 - When a journey starts, the page sends the selected difficulty with the start request (`POST /api/runs`, body `{"difficulty":"trial"}`). The server checks it is one of `ithaca`, `aegean`, `trial`, `wrath` and stores it in the `runs.difficulty` column. An unknown value is refused (`400`, `invalid_difficulty`).
 - The result sent at the end carries no difficulty. If a request includes one, the server ignores it: the run-start record decides the board. The nickname, ownership and result checks below are unchanged.
 - `GET /api/leaderboard?difficulty=ithaca|aegean|trial|wrath|legacy` returns one board (top 20 and your best on that board). Without the parameter, the reply is the old combined list in the old shape, so a page loaded before the update keeps working.
-- **Results saved before v18 (`legacy`).** Before v18, the `runs` table did not store a difficulty, and the optional analytics records are separate, opt-in and not linked to ranking entries. So the difficulty of an older result cannot be known. It is not assumed to be Normal: those results keep an empty difficulty and are shown only under "Earlier records (before difficulty split)". A journey started by a page loaded before the update (which sends no difficulty) is listed there too.
+- **Results with no recorded difficulty (`legacy`): saved before v18, or started from a page opened before the update.** Before v18, the `runs` table did not store a difficulty, and the optional analytics records are separate, opt-in and not linked to ranking entries. So the difficulty of an older result cannot be known. It is not assumed to be Normal: those results keep an empty difficulty and are shown only under "Earlier records (before difficulty split)". A journey started by a page loaded before the update (which sends no difficulty) is listed there too.
 - Limit: like the rest of the result, the difficulty is reported by the player's browser when the journey starts. The server cannot confirm the game was really played on that difficulty.
 - Database change: `drizzle/0004_runs_difficulty.sql` only adds the column and an index. Existing rows and columns are not changed.
 

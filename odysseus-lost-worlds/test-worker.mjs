@@ -320,18 +320,18 @@ test('rows saved before v18 are listed only as earlier records; the old request 
 
 // ---- Ranking page: difficulty tabs (v18) --------------------------------------
 function rankingPage({selected='aegean',language}={}){
- const els=new Map(),requests=[],v=visitor();
+ const els=new Map(),requests=[],v=visitor(),control={intercept:null};
  const element=id=>{if(!els.has(id))els.set(id,{id,textContent:'',value:'Tab Hero',hidden:false,disabled:false,children:[],events:{},attributes:{},className:'',
   setAttribute(k,val){this.attributes[k]=String(val);},getAttribute(k){return this.attributes[k]??null;},addEventListener(k,f){this.events[k]=f;},appendChild(c){this.children.push(c);},replaceChildren(){this.children=[];}});return els.get(id);};
  const DIFFICULTIES=Object.fromEntries(RANK_DIFFICULTIES.map(id=>[id,{ko:id,en:id,levelKo:id,levelEn:id}]));
  const ctx=vm.createContext({console,muted:false,state:'title',DIFFICULTIES,selectedDifficulty:selected,runDifficulty:selected,
   document:{getElementById:element,createElement:()=>({children:[],textContent:'',appendChild(c){this.children.push(c);}})},
-  fetch:async(p,opts)=>{requests.push({path:p,body:opts?.body?JSON.parse(opts.body):undefined});return v(p,opts?.body?JSON.parse(opts.body):undefined);}});
+  fetch:async(p,opts)=>{requests.push({path:p,body:opts?.body?JSON.parse(opts.body):undefined});if(control.intercept)return control.intercept(p);return v(p,opts?.body?JSON.parse(opts.body):undefined);}});
  // Same order as index.html: ui.js (language, difficulty picker) before ranking.js.
  vm.runInContext(fs.readFileSync('ui.js','utf8'),ctx);if(language)vm.runInContext("controlLanguage='"+language+"'",ctx);
  vm.runInContext(fs.readFileSync('ranking.js','utf8'),ctx);
  const pressed=()=>['ithaca','aegean','trial','wrath','legacy'].filter(id=>element('rank-tab-'+id).getAttribute('aria-pressed')==='true');
- return {ctx,el:element,requests,pressed,run:s=>vm.runInContext(s,ctx),boards:()=>requests.filter(r=>r.path.startsWith('/api/leaderboard')).map(r=>r.path.split('=')[1])};
+ return {ctx,el:element,requests,pressed,control,run:s=>vm.runInContext(s,ctx),boards:()=>requests.filter(r=>r.path.startsWith('/api/leaderboard')).map(r=>r.path.split('=')[1])};
 }
 test('index.html has five keyboard-usable ranking tabs in a labelled group',()=>{
  const html=fs.readFileSync('index.html','utf8'),group=html.match(/<div id="rank-tabs"[^>]*>(.*?)<\/div>/)?.[0];
@@ -371,4 +371,16 @@ test('after a journey the page shows the board of the difficulty it was started 
  const sent=page.requests.find(r=>r.path==='/api/results');assert.equal(sent.body.difficulty,undefined,'the result carries no difficulty');
  assert.deepEqual(page.pressed(),['wrath']);assert.equal(page.boards().at(-1),'wrath');
  assert.ok(page.el('rank-rows').children.some(row=>row.children[1].textContent==='Tab Hero (ME)'));assert.match(page.el('rank-personal').textContent,/My best: #\d+/);
+});
+test('switching tabs clears the previous board while loading and after a failed load',async()=>{
+ const page=rankingPage();await page.run('rankIdentityReady');await page.el('rank-tab-legacy').onclick();
+ assert.ok(page.el('rank-rows').children.length>0);assert.notEqual(page.el('rank-personal').textContent,'');
+ let fail;page.control.intercept=()=>new Promise((_,reject)=>{fail=reject;});
+ const loading=page.el('rank-tab-wrath').onclick();await new Promise(r=>setImmediate(r));
+ assert.deepEqual(page.pressed(),['wrath']);assert.equal(page.el('rank-rows').children.length,0,'old rows are gone at once');
+ assert.equal(page.el('rank-personal').textContent,'');assert.equal(page.el('rank-load').textContent,'Loading rankings…');
+ fail(Error('Offline'));await loading;
+ assert.equal(page.el('rank-rows').children.length,0);assert.equal(page.el('rank-personal').textContent,'');assert.equal(page.el('rank-load').textContent,'Offline');
+ page.control.intercept=null;await page.el('rank-tab-legacy').onclick();assert.match(page.el('rank-load').textContent,/no recorded difficulty: saved before v18, or started from a page opened before the update/);
+ page.run("controlLanguage='ko'");await page.el('rank-tab-legacy').onclick();assert.match(page.el('rank-load').textContent,/난이도가 기록되지 않은 결과입니다\(v18 이전 기록 또는 업데이트 전에 열어 둔 페이지/);
 });

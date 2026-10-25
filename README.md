@@ -77,7 +77,7 @@ For development checks, use Node.js 24 or later in the game folder: `npm test` (
 
 ## Current limitations
 
-- The live game (v16) still has one online leaderboard for all difficulties. From v18 (repository only, not deployed yet), each difficulty has its own leaderboard; results saved before v18 did not record a difficulty and are listed separately as “Earlier records”.
+- The live game (v16) still has one online leaderboard for all difficulties. From v18 (repository only, not deployed yet), each difficulty has its own leaderboard; results with no recorded difficulty (saved before v18, or started from a page opened before the update) are listed separately as “Earlier records”.
 - Mobile touch controls are not supported; a computer keyboard is recommended.
 - Updating the GitHub files and updating the live game are separate operations.
 

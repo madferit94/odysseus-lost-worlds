@@ -7,10 +7,10 @@
 - The online ranking is now split by difficulty, with four tabs: Ithaca's Path · Easy, Aegean Voyage · Normal, Trial of the Gods · Hard and Poseidon's Wrath · Extreme. Tab names follow the ENG/KOR button, and the tabs work with the keyboard (Tab, then Enter or Space). On narrow screens they wrap two per row.
 - The ranking opens on the difficulty selected for the next game. After you finish a journey, it shows the board for the difficulty you played.
 - A result counts for the difficulty its journey was started with. The server records the difficulty when the journey starts, so it cannot be changed when the result is sent.
-- Results saved before v18 did not record a difficulty, so their difficulty is not guessed. They are listed in a fifth tab, "Earlier records (before difficulty split)", and do not appear on the four difficulty boards. Details: [game folder guide](odysseus-lost-worlds/README.md#rankings-by-difficulty-v18).
+- Results with no recorded difficulty (saved before v18, or started from a page opened before the update) are not guessed into a difficulty. They are listed in a fifth tab, "Earlier records (before difficulty split)", and do not appear on the four difficulty boards. Details: [game folder guide](odysseus-lost-worlds/README.md#rankings-by-difficulty-v18).
 - Score formula, combat numbers, difficulty settings, analytics events and ranking-protection checks are unchanged. New analytics sessions are labeled `v18`.
 - Database: ranking entries get one new column for the difficulty. It is only added; nothing is removed or renamed.
-- 8 automated checks were added for difficulty rankings and the tabs.
+- 9 automated checks were added for difficulty rankings and the tabs.
 
 This change is in the repository only. The public game stays on v16 until a separate deployment.
 

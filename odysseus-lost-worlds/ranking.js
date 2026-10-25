@@ -1,6 +1,6 @@
 let rankRunId=null,rankPending=null,rankGeneration=0,rankStarting=null,rankIdentityReady=Promise.resolve();
-// v18: one ranking board per difficulty. 'legacy' lists results saved before v18,
-// when the difficulty of a journey was not recorded.
+// v18: one ranking board per difficulty. 'legacy' lists results with no recorded
+// difficulty: saved before v18, or started from a page opened before the update.
 const RANK_BOARDS={
  ithaca:{ko:'이타카의 길 · 쉬움',en:'ITHACA’S PATH · EASY'},
  aegean:{ko:'에게해의 항해 · 보통',en:'AEGEAN VOYAGE · NORMAL'},
@@ -57,12 +57,15 @@ function showRankBoard(id){if(!RANK_BOARD_IDS.includes(id))return null;rankBoard
 function rankTime(seconds){return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');}
 async function loadRanking(){
  const body=document.getElementById('rank-rows'),status=document.getElementById('rank-load'),board=rankBoard,ticket=++rankLoadTicket;status.textContent='Loading rankings…';
+ // Clear the previous board at once so its rows are never shown under another tab while loading or after a failure.
+ body.replaceChildren();document.getElementById('rank-personal').textContent='';
  try{const data=await rankRequest('/api/leaderboard?difficulty='+board);if(ticket!==rankLoadTicket)return;body.replaceChildren();
   const visible=[...data.entries];if(data.myBest&&data.myBest.rank>20)visible.push(data.myBest);document.getElementById('rank-personal').textContent=data.myBest?'My best: #'+data.myBest.rank+' · '+data.myBest.score.toLocaleString()+' points (ME)':'Your new records will be marked (ME) in this browser.';
   for(const [i,row] of visible.entries()){
    const tr=document.createElement('tr');if(row.is_me)tr.className='rank-me';for(const value of [row.rank||i+1,row.nickname+(row.is_me?' (ME)':''),row.score.toLocaleString(),rankTime(row.elapsed),row.retries]){const td=document.createElement('td');td.textContent=value;tr.appendChild(td);}body.appendChild(tr);
   }
-  status.textContent=board==='legacy'?(data.entries.length?'Results saved before v18, when all difficulties shared one ranking. Their difficulty was not recorded.':'No earlier records.'):data.entries.length?'Top 20 completed journeys on this difficulty · Highest score wins.':'No completed journeys on this difficulty yet. Be the first to return home!';
+  const ko=typeof controlLanguage==='string'&&controlLanguage==='ko';
+  status.textContent=board==='legacy'?(data.entries.length?(ko?'난이도가 기록되지 않은 결과입니다(v18 이전 기록 또는 업데이트 전에 열어 둔 페이지로 시작한 게임).':'Results with no recorded difficulty: saved before v18, or started from a page opened before the update.'):(ko?'난이도가 기록되지 않은 결과가 없습니다.':'No results without a recorded difficulty.')):data.entries.length?'Top 20 completed journeys on this difficulty · Highest score wins.':'No completed journeys on this difficulty yet. Be the first to return home!';
  }catch(error){if(ticket===rankLoadTicket)status.textContent=error.message;}
 }
 rankForm.addEventListener('submit',async event=>{
