@@ -25,9 +25,11 @@ const practiceTime=seconds=>Math.floor(seconds/60)+':'+String(Math.floor(seconds
 // The hero arrives as on a real journey: the blessings of the earlier bosses (+20 max HP each)
 // and the attack bonus of that stage (from enter). One life: the first fall ends the practice.
 // Returns null when this boss cannot be practised now.
+// True while a finished ranked journey waits for its nickname (ranking.js).
+const rankedResultWaiting=()=>typeof rankResultWaiting==='function'&&rankResultWaiting();
 function practicePlan(id){
  const boss=PRACTICE_BOSSES.find(b=>b.id===id);
- if(!boss||!beatenBosses().includes(id)||!['title','gameover','end'].includes(state))return null;
+ if(!boss||!beatenBosses().includes(id)||!['title','gameover','end'].includes(state)||rankedResultWaiting())return null;
  const earlier=PRACTICE_BOSSES.filter(b=>b.stage<boss.stage).map(b=>b.id);
  return {boss,earlier,stage:boss.stage,maxHP:100+20*earlier.length,lives:1};
 }
@@ -57,7 +59,11 @@ function endPractice(won){
 if(typeof continueJourney==='function'){const originalContinue=continueJourney;continueJourney=function(...args){const result=originalContinue(...args);if(result){practiceMenuOpen=false;refreshPracticeMenu();}return result;};}
 function refreshPracticeMenu(){
  const toggle=document.getElementById('practice'),menu=document.getElementById('practice-menu');if(!toggle||!menu)return;
- const ko=practiceKo(),visible=['title','gameover','end'].includes(state),beaten=beatenBosses();
+ const ko=practiceKo(),visible=['title','gameover','end'].includes(state),beaten=beatenBosses(),waiting=rankedResultWaiting();
+ // Practice is locked while a finished ranked journey waits to be saved or skipped.
+ if(waiting)practiceMenuOpen=false;toggle.disabled=waiting;
+ const wait=document.getElementById('practice-wait');
+ if(wait){wait.hidden=!(visible&&waiting);wait.lang=controlLanguage;wait.textContent=ko?'보스 연습을 하려면 먼저 아래 순위에 결과를 저장하거나 건너뛰세요.':'To practise a boss, first save your result to the rankings below, or skip it.';}
  toggle.hidden=!visible;toggle.textContent=ko?'보스 연습':'BOSS PRACTICE';toggle.lang=controlLanguage;
  toggle.setAttribute('aria-expanded',String(visible&&practiceMenuOpen));menu.hidden=!(visible&&practiceMenuOpen);
  // The open menu takes the place of the key reminder line, so the panel stays shorter.
@@ -69,9 +75,9 @@ function refreshPracticeMenu(){
   :(ko?'아직 이긴 보스가 없습니다. 여정에서 보스를 한 번 물리치면 이 브라우저에서 연습할 수 있습니다.':'No boss defeated yet. Beat a boss once on a journey, and you can practise it here in this browser.');
  for(const boss of PRACTICE_BOSSES){
   const button=document.getElementById('practice-'+boss.id),won=beaten.includes(boss.id);
-  button.disabled=!won;button.textContent=(ko?boss.ko:boss.en)+(won?'':(ko?' · 아직 이기지 않음':' · NOT YET DEFEATED'));
+  button.disabled=!won||waiting;button.textContent=(ko?boss.ko:boss.en)+(won?'':(ko?' · 아직 이기지 않음':' · NOT YET DEFEATED'));
  }
 }
-document.getElementById('practice').onclick=()=>{practiceMenuOpen=!practiceMenuOpen;refreshPracticeMenu();};
+document.getElementById('practice').onclick=()=>{if(rankedResultWaiting())return;practiceMenuOpen=!practiceMenuOpen;refreshPracticeMenu();};
 for(const boss of PRACTICE_BOSSES)document.getElementById('practice-'+boss.id).onclick=()=>startBossPractice(boss.id);
 refreshPracticeMenu();

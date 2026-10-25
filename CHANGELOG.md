@@ -8,9 +8,10 @@
 - A practice starts as a hero would arrive at that boss on a journey: the maximum HP from the earlier bosses' blessings and that stage's attack bonus. You have one life. The practice ends when the boss falls or you fall, and the menu shows the result (victory or defeat) and the time.
 - Bosses not yet beaten are shown but locked, and the menu explains why when none is unlocked. The list of beaten bosses is kept only in this browser.
 - Practice is not ranked and never saves or replaces the Continue checkpoint. The page does not start a ranking run for it, and the server refuses a run or result marked as practice.
+- After finishing a journey, Boss practice stays locked until you save your result to the rankings or skip it with the new **Skip, do not save** button, so a practice cannot silently drop a finished result.
 - Optional analytics: a practice is its own session marked `practice`. Existing events and fields keep their meaning.
 - Score formula, combat numbers, difficulty settings and ranking-protection checks are unchanged.
-- 7 automated checks were added.
+- 8 automated checks were added.
 
 This change is in the repository only. The public game stays on v16 until a separate deployment.
 

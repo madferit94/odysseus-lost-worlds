@@ -81,3 +81,22 @@ test('practice works with storage blocked (menu explains), and index.html wires 
  assert.ok(order.indexOf('checkpoint.js')<order.indexOf('practice.js')&&order.indexOf('practice.js')<order.indexOf('telemetry-hooks.js'));
  assert.match(fs.readFileSync(new URL('build.mjs',import.meta.url),'utf8'),/'practice\.js'/);
 });
+test('a finished ranked journey waiting for its nickname locks practice until it is saved or skipped',async()=>{
+ const finishJourney=async w=>{w.run("state='title';reset();");await settle();w.run('enter(10);update(8.1);');await settle();await settle();};
+ // Skip: the result is dropped on purpose, then practice opens.
+ const w=world({storage:withBeaten(['polyphemus'])});await settle();await finishJourney(w);
+ assert.equal(w.run('return state;'),'end');assert.equal(w.el('rank-form').hidden,false,'the nickname form is waiting');
+ assert.equal(w.el('practice').disabled,true);assert.equal(w.el('practice-wait').hidden,false);assert.match(w.el('practice-wait').textContent,/first save your result to the rankings below, or skip it/);
+ assert.ok(bossButtons(w).every(b=>b.disabled));w.el('practice').onclick();assert.equal(w.el('practice-menu').hidden,true,'the menu does not open');
+ assert.equal(w.run("return startBossPractice('polyphemus');"),false,'practice cannot start');assert.notEqual(w.run('return rankRunId;'),null,'the ranked run is kept');
+ w.run("setControlLanguage('ko');");assert.match(w.el('practice-wait').textContent,/먼저 아래 순위에 결과를 저장하거나 건너뛰세요/);assert.equal(w.el('rank-skip').textContent,'저장하지 않고 건너뛰기');
+ w.el('rank-skip').events.click();
+ assert.equal(w.el('rank-form').hidden,true);assert.match(w.el('rank-status').textContent,/저장하지 않았습니다/);assert.equal(w.requests.filter(r=>r.path==='/api/results').length,0);
+ assert.equal(w.el('practice').disabled,false);assert.equal(w.el('practice-wait').hidden,true);assert.equal(w.el('practice-polyphemus').disabled,false);
+ assert.equal(w.run("return startBossPractice('polyphemus');"),true);
+ // Save: after the result is stored, practice opens as well.
+ const s=world({storage:withBeaten(['polyphemus'])});await settle();await finishJourney(s);assert.equal(s.el('practice').disabled,true);
+ await s.el('rank-form').events.submit({preventDefault(){}});
+ assert.equal(s.requests.filter(r=>r.path==='/api/results').length,1,'the waiting result was saved');assert.match(s.el('rank-status').textContent,/Saved!/);
+ assert.equal(s.el('practice').disabled,false);assert.equal(s.el('practice-wait').hidden,true);assert.equal(s.run("return startBossPractice('polyphemus');"),true);
+});

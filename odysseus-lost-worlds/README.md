@@ -49,6 +49,7 @@ node build.mjs    # writes the deployable game and server to dist/
 - A practice starts the boss stage through `enter()` on the difficulty selected in the picker, with the state a hero has on arrival: maximum HP 100 + 20 for each earlier boss, those bosses' blessings, the stage's attack bonus, weapon 1, no energy and one life.
 - It ends when the boss falls (no cut-scene or next stage follows) or at the first fall. The menu then shows victory or defeat, the boss, the difficulty and the game time, and stays open for another try.
 - **Not ranked, checkpoint untouched.** A practice never starts a ranking run, drops any run this page started earlier, and is refused by the server if marked as practice. `checkpoint.js` saves only for new and continued journeys, so a practice never writes or deletes the Continue checkpoint.
+- While a finished ranked journey waits for its nickname, the practice button is disabled with a note (Korean and English) until the result is saved or skipped (`Skip, do not save` in the ranking form). Otherwise starting a practice would drop that result.
 - Optional analytics: a practice is its own session with `mode` = `practice`; a win ends with `game_clear`, a loss with `game_over`.
 
 ## Continue from a checkpoint (v19)
