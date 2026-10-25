@@ -43,7 +43,7 @@ const telemetry=(()=>{
  function begin(difficulty,mode='normal'){
   if(current)flush(current);current=null;
   if(!consent.checked){setStatus('off');return;}
-  current={meta:{id:crypto.randomUUID(),token:crypto.randomUUID()+crypto.randomUUID(),consent:true,version:'v19',mode,difficulty,source,isTest:testMode},queue:[],seq:0,started:false,busy:false,cancelled:false,failures:0};pending.add(current);setStatus('sending');
+  current={meta:{id:crypto.randomUUID(),token:crypto.randomUUID()+crypto.randomUUID(),consent:true,version:GAME_VERSION,mode,difficulty,source,isTest:testMode},queue:[],seq:0,started:false,busy:false,cancelled:false,failures:0};pending.add(current);setStatus('sending');
  }
  function emit(name,snapshot,extra={}){
   if(!current||current.cancelled||!consent.checked)return;

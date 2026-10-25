@@ -18,7 +18,8 @@
   if(c){telemetry.begin(c.difficulty,'continue');attempt=0;stageDone=false;bossStartedAt=null;ended=false;ready.clear();
    telemetry.emit('game_start',{activeMs:0,stage:c.stage,attempt:0,hp:c.maxHP,energy:Math.floor(c.energy),lives:c.lives,damageTaken:Math.round(c.runStats.damageTaken),normalKills:c.runStats.normalKills,bossKills:c.runStats.bossKills,retries:c.runStats.retries});}
   return originalContinue(...args);};}
- const originalEnter=enter;enter=function(s){if(p&&s===1&&stage===0)complete();const result=originalEnter(s);attempt=0;stageDone=false;bossStartedAt=null;event('stage_start');bossBegin();observeReady();return result;};
+ // Leaving the prologue on foot completes it; starting a continued journey (from a menu screen) does not.
+ const originalEnter=enter;enter=function(s){if(p&&s===1&&stage===0&&state==='play')complete();const result=originalEnter(s);attempt=0;stageDone=false;bossStartedAt=null;event('stage_start');bossBegin();observeReady();return result;};
  const originalResume=resumeBattle;resumeBattle=function(...args){const result=originalResume(...args);if(result){attempt++;ready.clear();event('retry');event('stage_start');bossBegin();observeReady();}return result;};
  const originalHurt=hurt;hurt=function(...args){const before=p?.hp,result=originalHurt(...args);if(before>0&&p.hp===0){event('player_death');bossEnd('death');if(state==='gameover'&&!ended){ended=true;event('game_over');}}return result;};
  const originalDamage=damage;damage=function(e,...args){const alive=!e.dead,result=originalDamage(e,...args);if(alive&&e.boss&&e.dead)bossEnd('win');observeReady();return result;};

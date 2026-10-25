@@ -26,7 +26,7 @@ function world({fullscreenApi=true}={}){
   for(const fn of capture){fn(ev);if(stopped)return;}for(const fn of bubble)fn(ev);};
  const surface=created.find(e=>e.className==='play-surface');
  const status=created.find(e=>e.id==='display-status');
- return {doc,surface,status,run,press,el:element,state:()=>run('return state;'),fullscreenChange:()=>docHandlers.fullscreenchange?.()};
+ return {doc,surface,status,created,run,press,el:element,state:()=>run('return state;'),fullscreenChange:()=>docHandlers.fullscreenchange?.()};
 }
 const settle=()=>new Promise(r=>setImmediate(r));
 
@@ -76,4 +76,9 @@ test('without the Fullscreen API the game expands inside the window and can be c
  assert.ok(!w.surface.classList.contains('fullscreen-fallback'),'Esc leaves the expanded view');
  assert.ok(!w.doc.body.classList.contains('display-fullscreen'));assert.equal(w.state(),'pause');
  assert.equal(w.el('display-fullscreen').textContent,'Fullscreen');
+});
+
+test('the display toolbar shows the build version from game.js',()=>{
+ const w=world();const toolbar=w.created.find(e=>e.className==='play-toolbar');
+ assert.match(toolbar.innerHTML,/<span class="display-version">v19<\/span>/);assert.equal(w.run('return GAME_VERSION;'),'v19');
 });

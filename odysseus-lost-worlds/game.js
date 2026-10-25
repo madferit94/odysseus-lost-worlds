@@ -1,6 +1,8 @@
 'use strict';
 const canvas=document.getElementById('game'),g=canvas.getContext('2d'),overlay=document.getElementById('overlay'),keys=new Set();
 const horseSprite=new Image();horseSprite.src='assets/trojan-horse.png';
+// Build version shown on the page (display.js) and recorded by analytics and checkpoints.
+const GAME_VERSION='v19';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const LEVELS=[
  {name:'PROLOGUE — TROY',theme:'troy',length:1250,waves:0,line:'THE WAR IS OVER. GO HOME.'},

@@ -43,7 +43,7 @@ node build.mjs    # writes the deployable game and server to dist/
 
 ## Continue from a checkpoint (v19)
 
-`checkpoint.js` saves a checkpoint in the browser's `localStorage` (key `odysseus-checkpoint-v1`) each time stages 1-9 start. It stores only what `game.js` carries from one stage to the next: stage, difficulty, lives, maximum HP (boss blessings), finisher energy, weapon, defeated bosses, the celestial compass, score, kills and the journey counters. Every stage start refills HP, so HP is not stored.
+`checkpoint.js` saves a checkpoint in the browser's `localStorage` (key `odysseus-checkpoint-v1`) each time stages 1-9 start. It stores only what `game.js` carries from one stage to the next: stage, difficulty, lives, maximum HP (boss blessings), finisher energy, shield (up to 60; `enter()` does not reset it), weapon, defeated bosses, the celestial compass, score, kills and the journey counters. Every stage start refills HP, so HP is not stored. A continued stage therefore starts with the same hero and journey state as when it first began; only game time restarts.
 
 - Continue appears on the title, game over and ending screens only when a valid checkpoint exists. It sets that state and starts the stage through the same `enter()` the game uses, on the saved difficulty (not the one selected in the picker). Game time restarts from 0.
 - A game over keeps the checkpoint (from the start of that stage, with the lives it had then). Reaching home deletes it. A new game replaces it when the new journey reaches stage 1; the prologue has no fights, so pressing Enter by mistake does not lose a saved journey at once.
