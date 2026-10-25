@@ -36,7 +36,16 @@ function startRankRun(difficulty=typeof runDifficulty==='string'?runDifficulty:n
  rankStatus.textContent='Starting your ranked journey…';const start=rankDifficulty(difficulty)?{difficulty}:{};
  rankStarting=rankIdentityReady.then(()=>rankRequest('/api/runs',start)).then(data=>{if(generation===rankGeneration){rankRunId=data.runId;rankRunDifficulty=rankDifficulty(data.difficulty);rankStatus.textContent='Journey started. Reach home to enter the rankings.';}}).catch(error=>{if(generation===rankGeneration)rankStatus.textContent=error.message+' This journey can still be played.';});
 }
-async function finishRankRun(result){
+// v19: continued journeys (and other unranked modes) never start or submit a ranked run.
+function unrankedMessage(mode){
+ const ko=typeof controlLanguage==='string'&&controlLanguage==='ko';
+ return mode==='continue'?(ko?'이어한 여정은 순위에 등록되지 않습니다. 순위에 도전하려면 새 게임을 시작하세요.':'This is a continued journey, so it is not ranked. Start a new game to enter the rankings.')
+  :(ko?'이 플레이는 순위에 등록되지 않습니다.':'This play is not ranked.');
+}
+// Drops any ranked run this page started earlier, so it can never be submitted for an unranked journey.
+function cancelRankRun(mode){++rankGeneration;rankRunId=null;rankPending=null;rankRunDifficulty=null;rankStarting=null;rankForm.hidden=true;rankStatus.textContent=unrankedMessage(mode);}
+async function finishRankRun(result,mode='normal'){
+ if(mode!=='normal'){cancelRankRun(mode);return;}
  const generation=rankGeneration;rankPending=result;await rankStarting;if(generation!==rankGeneration)return;
  if(!rankRunId){rankStatus.textContent='Journey complete. This run could not connect to online rankings.';return;}
  showRankBoard(rankRunDifficulty||'legacy');

@@ -11,6 +11,13 @@
   for(const god of Object.values(FINISHER_KEYS)){const available=p.energy>=finisherCost(god);if(available&&!ready.has(god)){ready.add(god);event('finisher_ready',{god});}if(!available)ready.delete(god);}
  };
  const originalReset=reset;reset=function(...args){telemetry.begin(selectedDifficulty);attempt=0;stageDone=false;bossStartedAt=null;ended=false;ready.clear();telemetry.emit('game_start',{activeMs:0,stage:0,attempt:0,hp:100,energy:0,lives:3,damageTaken:0,normalKills:0,bossKills:0,retries:0});return originalReset(...args);};
+ // v19: a journey continued from a checkpoint is a new analytics session marked 'continue'.
+ // Its game_start carries the restored stage and counters; activeMs counts this session only.
+ if(typeof continueJourney==='function'){const originalContinue=continueJourney;continueJourney=function(...args){
+  const c=typeof readCheckpoint==='function'&&['title','gameover','end'].includes(state)?readCheckpoint():null;
+  if(c){telemetry.begin(c.difficulty,'continue');attempt=0;stageDone=false;bossStartedAt=null;ended=false;ready.clear();
+   telemetry.emit('game_start',{activeMs:0,stage:c.stage,attempt:0,hp:c.maxHP,energy:Math.floor(c.energy),lives:c.lives,damageTaken:Math.round(c.runStats.damageTaken),normalKills:c.runStats.normalKills,bossKills:c.runStats.bossKills,retries:c.runStats.retries});}
+  return originalContinue(...args);};}
  const originalEnter=enter;enter=function(s){if(p&&s===1&&stage===0)complete();const result=originalEnter(s);attempt=0;stageDone=false;bossStartedAt=null;event('stage_start');bossBegin();observeReady();return result;};
  const originalResume=resumeBattle;resumeBattle=function(...args){const result=originalResume(...args);if(result){attempt++;ready.clear();event('retry');event('stage_start');bossBegin();observeReady();}return result;};
  const originalHurt=hurt;hurt=function(...args){const before=p?.hp,result=originalHurt(...args);if(before>0&&p.hp===0){event('player_death');bossEnd('death');if(state==='gameover'&&!ended){ended=true;event('game_over');}}return result;};
