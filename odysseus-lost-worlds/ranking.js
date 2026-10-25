@@ -40,6 +40,7 @@ function startRankRun(difficulty=typeof runDifficulty==='string'?runDifficulty:n
 function unrankedMessage(mode){
  const ko=typeof controlLanguage==='string'&&controlLanguage==='ko';
  return mode==='continue'?(ko?'이어한 여정은 순위에 등록되지 않습니다. 순위에 도전하려면 새 게임을 시작하세요.':'This is a continued journey, so it is not ranked. Start a new game to enter the rankings.')
+  :mode==='practice'?(ko?'보스 연습은 순위에 등록되지 않습니다.':'Boss practice is not ranked.')
   :(ko?'이 플레이는 순위에 등록되지 않습니다.':'This play is not ranked.');
 }
 // Drops any ranked run this page started earlier, so it can never be submitted for an unranked journey.
