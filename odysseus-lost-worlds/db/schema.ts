@@ -4,7 +4,10 @@ export const runs = sqliteTable('runs', {
  submittedAt: integer('submitted_at'), nickname: text('nickname'),
  score: integer('score'), elapsed: integer('elapsed'), normalKills: integer('normal_kills'),
  bossKills: integer('boss_kills'), damageTaken: integer('damage_taken'), retries: integer('retries'),
-}, t => [index('idx_runs_ranking').on(t.score,t.elapsed,t.submittedAt)]);
+ // Difficulty chosen when the journey started (v18+): ithaca, aegean, trial or wrath.
+ // NULL for runs saved before v18, which did not record a difficulty.
+ difficulty: text('difficulty'),
+}, t => [index('idx_runs_ranking').on(t.score,t.elapsed,t.submittedAt),index('idx_runs_difficulty_ranking').on(t.difficulty,t.score,t.elapsed,t.submittedAt)]);
 
 // Anonymous page-load IDs prevent duplicate counting when requests are retried.
 export const pageViews = sqliteTable('page_views', {
