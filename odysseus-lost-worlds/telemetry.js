@@ -40,10 +40,10 @@ const telemetry=(()=>{
   clearTimeout(retryTimer);const runs=[...pending].filter(r=>!r.cancelled&&r.queue.length);if(!runs.length)return;
   retryTimer=setTimeout(()=>{for(const run of runs)flush(run);},Math.min(30000,2000*2**Math.min(4,Math.max(...runs.map(r=>r.failures)))));
  }
- function begin(difficulty){
+ function begin(difficulty,mode='normal'){
   if(current)flush(current);current=null;
   if(!consent.checked){setStatus('off');return;}
-  current={meta:{id:crypto.randomUUID(),token:crypto.randomUUID()+crypto.randomUUID(),consent:true,version:'v18',difficulty,source,isTest:testMode},queue:[],seq:0,started:false,busy:false,cancelled:false,failures:0};pending.add(current);setStatus('sending');
+  current={meta:{id:crypto.randomUUID(),token:crypto.randomUUID()+crypto.randomUUID(),consent:true,version:'v19',mode,difficulty,source,isTest:testMode},queue:[],seq:0,started:false,busy:false,cancelled:false,failures:0};pending.add(current);setStatus('sending');
  }
  function emit(name,snapshot,extra={}){
   if(!current||current.cancelled||!consent.checked)return;

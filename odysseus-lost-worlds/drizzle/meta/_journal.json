@@ -36,6 +36,13 @@
       "when": 1792926937186,
       "tag": "0004_runs_difficulty",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792928216307,
+      "tag": "0005_play_sessions_mode",
+      "breakpoints": true
     }
   ]
 }
