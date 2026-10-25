@@ -5,7 +5,7 @@ const EVENT_NAMES=new Set(['game_start','stage_start','stage_complete','player_d
 const GODS=['','athena','achilles','hermes','zeus'];
 const SOURCES=['direct','x','reddit','linkedin','itch','other'];
 // v19: how the journey began. Pages before v19 send no mode; those are new journeys ('normal').
-const MODES=['normal','continue'];
+const MODES=['normal','continue','practice'];
 const int=(v,max)=>Number.isSafeInteger(v)&&v>=0&&v<=max;
 async function telemetryBody(request){
  if(!request.headers.get('content-type')?.includes('application/json'))throw Error('JSON required');
