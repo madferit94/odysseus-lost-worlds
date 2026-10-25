@@ -10,6 +10,7 @@ This folder holds the browser game and its server code. For what the game is and
 | --- | --- |
 | `index.html`, `display.css` | Game page and its layout |
 | `game.js` and the other `*.js` files | Movement, combat, bosses, finishers, screen display, rankings, page views and optional play analytics |
+| `checkpoint.js` | v19 Continue: saves a checkpoint in this browser at each stage and restores it |
 | `display.js` | v17 toolbar: fullscreen, collapsible controls guide, language and sound buttons |
 | `assets/` | Game images |
 | `server/worker.mjs` | Server for online rankings (one board per difficulty from v18) and page views |
@@ -39,6 +40,16 @@ node build.mjs    # writes the deployable game and server to dist/
 ```
 
 `npm test` does not need `npm install`. `dist/` is a build output and is not stored in Git. `node build.mjs` reads `.openai/hosting.json`, which points to the existing hosted project; deploying from another account needs its own project and database.
+
+## Continue from a checkpoint (v19)
+
+`checkpoint.js` saves a checkpoint in the browser's `localStorage` (key `odysseus-checkpoint-v1`) each time stages 1-9 start. It stores only what `game.js` carries from one stage to the next: stage, difficulty, lives, maximum HP (boss blessings), finisher energy, weapon, defeated bosses, the celestial compass, score, kills and the journey counters. Every stage start refills HP, so HP is not stored.
+
+- Continue appears on the title, game over and ending screens only when a valid checkpoint exists. It sets that state and starts the stage through the same `enter()` the game uses, on the saved difficulty (not the one selected in the picker). Game time restarts from 0.
+- A game over keeps the checkpoint (from the start of that stage, with the lives it had then). Reaching home deletes it. A new game replaces it when the new journey reaches stage 1; the prologue has no fights, so pressing Enter by mistake does not lose a saved journey at once.
+- Storage errors (blocked, full, private mode) are caught; the game then simply has no Continue. A checkpoint that does not match the game rules (for example more maximum HP than the defeated bosses give) is ignored and removed.
+- **Not ranked.** A continued journey never starts a ranking run, drops any run this page started earlier, and never shows the nickname form. The server also refuses `POST /api/runs` and `POST /api/results` that say `mode` is anything other than `normal` (`400`, `unranked_mode`). The server cannot see the game, so a modified browser could still send a made-up result as a normal journey; that is the same limit as described under Ranking protection, and such entries are removed by the operator.
+- Optional analytics: a continued journey is a new session with `mode` = `continue` ([analytics guide](TELEMETRY-v16.md)).
 
 ## Rankings by difficulty (v18)
 

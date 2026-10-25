@@ -2,6 +2,18 @@
 
 [Back to README](README.md) · [한국어](CHANGELOG.ko.md)
 
+## v19 (repository only, not deployed) · Continue from a checkpoint
+
+- Each time a stage starts, the game saves a checkpoint in this browser: stage, difficulty, lives, maximum HP from boss blessings, finisher energy, weapon, defeated bosses, the celestial compass, score and kills. HP is not saved because every stage starts with full HP.
+- When a checkpoint exists, the title, game over and ending screens show **Continue (Stage N · difficulty)**. It restarts that stage exactly as it began, on the saved difficulty. It works with the keyboard (Tab, then Enter).
+- Rules: a game over keeps the checkpoint. Reaching home deletes it. A new game keeps the old checkpoint until the new journey reaches stage 1, then replaces it. If the browser blocks storage, the game plays normally without Continue.
+- Continued journeys are not ranked. The screen says so before you continue, the page does not start or submit a ranking run for them, and the server refuses a run or result marked as continued.
+- Optional analytics: a continued journey is a new session marked `continue`; new sessions are labeled `v19`. Existing events and fields keep their meaning; earlier sessions count as `normal`.
+- Score formula, combat numbers, difficulty settings and ranking-protection checks are unchanged. The database gets one added column for analytics sessions.
+- 9 automated checks were added.
+
+This change is in the repository only. The public game stays on v16 until a separate deployment.
+
 ## v18 (repository only, not deployed) · Rankings by difficulty
 
 - The online ranking is now split by difficulty, with four tabs: Ithaca's Path · Easy, Aegean Voyage · Normal, Trial of the Gods · Hard and Poseidon's Wrath · Extreme. Tab names follow the ENG/KOR button, and the tabs work with the keyboard (Tab, then Enter or Space). On narrow screens they wrap two per row.
