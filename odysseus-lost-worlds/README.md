@@ -12,7 +12,7 @@ This folder holds the browser game and its server code. For what the game is and
 | `game.js` and the other `*.js` files | Movement, combat, bosses, finishers, screen display, rankings, page views and optional play analytics |
 | `display.js` | v17 toolbar: fullscreen, collapsible controls guide, language and sound buttons |
 | `assets/` | Game images |
-| `server/worker.mjs` | Server for online rankings and page views |
+| `server/worker.mjs` | Server for online rankings (one board per difficulty from v18) and page views |
 | `server/telemetry.mjs` | Server for optional play analytics |
 | `server/protection.mjs` | Ranking result checks, request limits and clean-up of unfinished journeys |
 | `server/nickname.mjs`, `server/nickname-blocklist.mjs` | Nickname clean-up and the editable list of blocked and reserved names |
@@ -39,6 +39,17 @@ node build.mjs    # writes the deployable game and server to dist/
 ```
 
 `npm test` does not need `npm install`. `dist/` is a build output and is not stored in Git. `node build.mjs` reads `.openai/hosting.json`, which points to the existing hosted project; deploying from another account needs its own project and database.
+
+## Rankings by difficulty (v18)
+
+Each difficulty has its own ranking board. The page shows four tabs plus "Earlier records".
+
+- When a journey starts, the page sends the selected difficulty with the start request (`POST /api/runs`, body `{"difficulty":"trial"}`). The server checks it is one of `ithaca`, `aegean`, `trial`, `wrath` and stores it in the `runs.difficulty` column. An unknown value is refused (`400`, `invalid_difficulty`).
+- The result sent at the end carries no difficulty. If a request includes one, the server ignores it: the run-start record decides the board. The nickname, ownership and result checks below are unchanged.
+- `GET /api/leaderboard?difficulty=ithaca|aegean|trial|wrath|legacy` returns one board (top 20 and your best on that board). Without the parameter, the reply is the old combined list in the old shape, so a page loaded before the update keeps working.
+- **Results saved before v18 (`legacy`).** Before v18, the `runs` table did not store a difficulty, and the optional analytics records are separate, opt-in and not linked to ranking entries. So the difficulty of an older result cannot be known. It is not assumed to be Normal: those results keep an empty difficulty and are shown only under "Earlier records (before difficulty split)". A journey started by a page loaded before the update (which sends no difficulty) is listed there too.
+- Limit: like the rest of the result, the difficulty is reported by the player's browser when the journey starts. The server cannot confirm the game was really played on that difficulty.
+- Database change: `drizzle/0004_runs_difficulty.sql` only adds the column and an index. Existing rows and columns are not changed.
 
 ## Ranking protection
 

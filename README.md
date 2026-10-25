@@ -4,7 +4,7 @@
 
 A browser action game about finding your way home from Troy to Ithaca through the trials of the gods.
 
-**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Live game: **v16** · Repository: **v17 (not deployed)**
+**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Live game: **v16** · Repository: **v18 (not deployed)**
 
 ## About the game
 
@@ -14,7 +14,7 @@ Play as Odysseus after the Trojan War and journey home to Ithaca. Across 11 stag
 - **Four finishers:** Call upon Athena, Achilles, Hermes, or Zeus.
 - **Boss battles:** Face the distinct attacks of Polyphemus, Poseidon, Cao Cao, and Antinous.
 - **Survival:** Start with three lives. During boss fights, green healing zones appear at random times and locations; stand inside them to recover health.
-- **Scores and rankings:** Complete the journey to submit a score under a public nickname on the live site. No login is required.
+- **Scores and rankings:** Complete the journey to submit a score under a public nickname on the live site. No login is required. From v18 (not deployed yet), each difficulty has its own ranking.
 - **Four difficulty levels:** From Ithaca's Path (easy) to Poseidon's Wrath (extreme).
 - **Optional play analytics:** Anonymous stage, boss and death records are collected only after opt-in. Off by default. [Collection guide](odysseus-lost-worlds/TELEMETRY-v16.md)
 
@@ -77,7 +77,7 @@ For development checks, use Node.js 24 or later in the game folder: `npm test` (
 
 ## Current limitations
 
-- All difficulty levels currently share one online leaderboard.
+- The live game (v16) still has one online leaderboard for all difficulties. From v18 (repository only, not deployed yet), each difficulty has its own leaderboard; results saved before v18 did not record a difficulty and are listed separately as “Earlier records”.
 - Mobile touch controls are not supported; a computer keyboard is recommended.
 - Updating the GitHub files and updating the live game are separate operations.
 
