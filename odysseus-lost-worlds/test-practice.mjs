@@ -100,3 +100,13 @@ test('a finished ranked journey waiting for its nickname locks practice until it
  assert.equal(s.requests.filter(r=>r.path==='/api/results').length,1,'the waiting result was saved');assert.match(s.el('rank-status').textContent,/Saved!/);
  assert.equal(s.el('practice').disabled,false);assert.equal(s.el('practice-wait').hidden,true);assert.equal(s.run("return startBossPractice('polyphemus');"),true);
 });
+test('a checkpoint saved in another tab cannot drop a finished ranked result waiting for its nickname',async()=>{
+ const w=world({storage:withBeaten(['polyphemus'])});await settle();w.run("reset();");await settle();w.run('enter(10);update(8.1);');await settle();await settle();
+ assert.equal(w.el('rank-form').hidden,false);assert.equal(w.el('continue').hidden,true,'reaching home cleared this tab\'s checkpoint');
+ w.storage.setItem(CHECKPOINT,savedCheckpoint);w.run('refreshContinueButton();');
+ assert.equal(w.el('continue').hidden,false);assert.equal(w.el('continue').disabled,true);assert.match(w.el('continue-note').textContent,/To continue, first save your result to the rankings below, or skip it/);
+ assert.equal(w.run('return continueJourney();'),false);assert.equal(w.run('return state;'),'end');assert.notEqual(w.run('return rankRunId;'),null,'the ranked run is kept');
+ w.run("setControlLanguage('ko');");assert.match(w.el('continue-note').textContent,/이어하기를 하려면 먼저 아래 순위에 결과를 저장하거나 건너뛰세요/);
+ w.el('rank-skip').events.click();
+ assert.equal(w.el('continue').disabled,false);assert.match(w.el('continue-note').textContent,/순위에 등록되지 않습니다/);assert.equal(w.run('return continueJourney();'),true);
+});

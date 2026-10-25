@@ -57,7 +57,7 @@ function rankAttr(el,name,value){if(typeof el.setAttribute==='function')el.setAt
 // A finished ranked journey waits here until it is saved or skipped. Boss practice
 // (practice.js) stays locked meanwhile, so starting one cannot silently drop it.
 function rankResultWaiting(){return !!(rankPending&&rankRunId);}
-function rankWaitingChanged(){if(typeof refreshPracticeMenu==='function')refreshPracticeMenu();}
+function rankWaitingChanged(){if(typeof refreshPracticeMenu==='function')refreshPracticeMenu();if(typeof refreshContinueButton==='function')refreshContinueButton();}
 function skipRankResult(){
  if(!rankResultWaiting())return false;rankPending=null;rankForm.hidden=true;
  rankStatus.textContent=typeof controlLanguage==='string'&&controlLanguage==='ko'?'이 결과는 순위에 저장하지 않았습니다.':'This result was not saved to the rankings.';
