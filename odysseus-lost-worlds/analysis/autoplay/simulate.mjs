@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Worker, isMainThread, parentPort, workerData} from 'node:worker_threads';
+import {execSync} from 'node:child_process';
 import {simulateRun} from './run.mjs';
 import {SKILLS, MAIN_SKILLS, REFERENCE_SKILLS, DIFFICULTIES} from './skills.mjs';
 import {aggregateCell, rankSpikes, CSV_COLUMNS, csvRow} from './aggregate.mjs';
@@ -83,7 +84,7 @@ async function main() {
   const summary = {
     meta: {
       runsPerCell: runs, seeds: [firstSeed, firstSeed + runs - 1], totalRuns: results.length, wallSeconds: Math.round(seconds),
-      workers, gameSecondsPlayed: Math.round(results.reduce((a, r) => a + r.gameSeconds, 0)),
+      gameVersion: gameVersion(), workers, gameSecondsPlayed: Math.round(results.reduce((a, r) => a + r.gameSeconds, 0)),
       frameStep: '1/60 s', maxGameSeconds: 3600, stuckSeconds: 180, weapon: 'bronze sword (default, never switched)', node: process.version,
     },
     difficulties, skills, profiles: Object.fromEntries(skills.map(s => [s, SKILLS[s]])),
@@ -95,4 +96,12 @@ async function main() {
   const size = fs.statSync(path.join(outDir, 'runs.csv')).size;
   console.log(`Wrote runs.csv (${(size / 1e6).toFixed(2)} MB), summary.json, REPORT.md, REPORT.ko.md to ${outDir}`);
   for (const d of difficulties) console.log(d.padEnd(7), skills.map(s => `${s} ${(100 * cells[d + '/' + s].clearRate.p).toFixed(0)}%`).join('  '));
+}
+
+// Which game code was played: the GAME_VERSION constant (if any) and the Git commit.
+function gameVersion() {
+  let version = 'v17', commit = 'unknown';
+  try { version = fs.readFileSync(path.join(HERE, '../../game.js'), 'utf8').match(/GAME_VERSION='([^']+)'/)?.[1] || version; } catch {}
+  try { commit = execSync('git rev-parse --short HEAD', {cwd: HERE, encoding: 'utf8'}).trim(); } catch {}
+  return {version, commit};
 }

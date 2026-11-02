@@ -7,6 +7,15 @@
   ],
   "totalRuns": 4800,
   "wallSeconds": 359,
+  "gameVersion": {
+   "version": "v17",
+   "commit": "55539e0"
+  },
+  "verified": {
+   "version": "v19",
+   "commit": "14dfc20",
+   "runs": 240
+  },
   "workers": 7,
   "gameSecondsPlayed": 1067702,
   "frameStep": "1/60 s",

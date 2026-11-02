@@ -2,7 +2,7 @@
 
 **English** · [한국어](REPORT.ko.md)
 
-Bots played the real game code (v17 `game.js` and friends, unchanged) **4,800 times**: 4 difficulties × 6 bot skill levels × 200 seeds each. Every run is a full journey with 3 lives and the game's own "continue" after a death, exactly like the page. The goal is to see *where* the game is hard, not to replace real players.
+Bots played the real game code (v17 `game.js` and friends, unchanged) **4,800 times**: 4 difficulties × 6 bot skill levels × 200 seeds each. Every run is a full journey with 3 lives and the game's own "continue" after a death, exactly like the page. The goal is to see *where* the game is hard, not to replace real players. Game code: v17 (commit `55539e0`); 240 of the same seeds replayed on v19 (`14dfc20`) gave identical results, so the numbers also hold for v19.
 
 ## Key findings
 
@@ -242,6 +242,7 @@ Other options: `--difficulties ithaca,wrath`, `--skills expert,novice`, `--seed 
 | Item | Value |
 | --- | ---: |
 | Runs | 4800 (200 per difficulty × skill, seeds 1–200) |
+| Game version | v17 · commit `55539e0`; re-checked on v19 (`14dfc20`): 240 same-seed runs identical |
 | Wall time | 359 s · 7 worker threads · Node v24.14.1 |
 | Game time played | 296.6 h |
 | Time step | 1/60 s |

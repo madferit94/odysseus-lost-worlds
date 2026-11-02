@@ -39,8 +39,8 @@ function build(S, L) {
 
   P(t('# Autoplay balance report', '# 자동 플레이 밸런스 보고서'),
     t('**English** · [한국어](REPORT.ko.md)', '[English](REPORT.md) · **한국어**'),
-    t(`Bots played the real game code (v17 \`game.js\` and friends, unchanged) **${allRuns.toLocaleString('en')} times**: ${D.length} difficulties × ${skills.length} bot skill levels × ${S.meta.runsPerCell} seeds each. Every run is a full journey with 3 lives and the game's own "continue" after a death, exactly like the page. The goal is to see *where* the game is hard, not to replace real players.`,
-      `봇이 실제 게임 코드(v17 \`game.js\` 등, 수정 없음)를 **${allRuns.toLocaleString('en')}판** 플레이했습니다: 난이도 ${D.length}개 × 봇 실력 ${skills.length}단계 × 시드 ${S.meta.runsPerCell}개. 한 판은 목숨 3개로 처음부터 끝까지 진행하며, 죽으면 페이지와 똑같이 게임의 "이어하기"로 재도전합니다. 목적은 실제 플레이어를 대신하는 것이 아니라 *어디가* 어려운지 보는 것입니다.`));
+    t(`Bots played the real game code (${S.meta.gameVersion?.version ?? 'v17'} \`game.js\` and friends, unchanged) **${allRuns.toLocaleString('en')} times**: ${D.length} difficulties × ${skills.length} bot skill levels × ${S.meta.runsPerCell} seeds each. Every run is a full journey with 3 lives and the game's own "continue" after a death, exactly like the page. The goal is to see *where* the game is hard, not to replace real players.${S.meta.verified ? ` Game code: ${S.meta.gameVersion.version} (commit \`${S.meta.gameVersion.commit}\`); ${S.meta.verified.runs} of the same seeds replayed on ${S.meta.verified.version} (\`${S.meta.verified.commit}\`) gave identical results, so the numbers also hold for ${S.meta.verified.version}.` : ''}`,
+      `봇이 실제 게임 코드(${S.meta.gameVersion?.version ?? 'v17'} \`game.js\` 등, 수정 없음)를 **${allRuns.toLocaleString('en')}판** 플레이했습니다: 난이도 ${D.length}개 × 봇 실력 ${skills.length}단계 × 시드 ${S.meta.runsPerCell}개. 한 판은 목숨 3개로 처음부터 끝까지 진행하며, 죽으면 페이지와 똑같이 게임의 "이어하기"로 재도전합니다. 목적은 실제 플레이어를 대신하는 것이 아니라 *어디가* 어려운지 보는 것입니다.${S.meta.verified ? ` 게임 코드: ${S.meta.gameVersion.version}(커밋 \`${S.meta.gameVersion.commit}\`). 같은 시드 ${S.meta.verified.runs}판을 ${S.meta.verified.version}(\`${S.meta.verified.commit}\`)에서 다시 돌려 완전히 같은 결과가 나왔으므로, 이 숫자는 ${S.meta.verified.version}에도 그대로 맞습니다.` : ''}`));
 
   // ---------- key findings
   P(t('## Key findings', '## 핵심 결과'));
@@ -252,6 +252,7 @@ function build(S, L) {
   P(t('## Run details', '## 실행 정보'),
     table([t('Item', '항목'), t('Value', '값')], [
       [t('Runs', '판 수'), `${m.totalRuns} (${m.runsPerCell} ${t('per difficulty × skill', '난이도 × 실력마다')}, ${t('seeds', '시드')} ${m.seeds[0]}–${m.seeds[1]})`],
+      [t('Game version', '게임 버전'), m.gameVersion ? `${m.gameVersion.version} · ${t('commit', '커밋')} \`${m.gameVersion.commit}\`` + (m.verified ? t(`; re-checked on ${m.verified.version} (\`${m.verified.commit}\`): ${m.verified.runs} same-seed runs identical`, `; ${m.verified.version}(\`${m.verified.commit}\`)에서 같은 시드 ${m.verified.runs}판 다시 돌려 완전히 같음`) : '') : '–'],
       [t('Wall time', '실제 걸린 시간'), `${m.wallSeconds} s · ${m.workers} ${t('worker threads', '워커 스레드')} · Node ${m.node}`],
       [t('Game time played', '플레이한 게임 시간'), `${num(m.gameSecondsPlayed / 3600, 1)} h`],
       [t('Time step', '시간 간격'), m.frameStep],
