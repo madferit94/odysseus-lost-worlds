@@ -22,6 +22,7 @@ This folder holds the browser game and its server code. For what the game is and
 | `export-analytics.mjs` | Operator-only tool that turns an analytics snapshot into CSV files |
 | `admin-remove-run.mjs` | Operator-only tool that finds and removes ranking entries |
 | `test-game.cjs`, `test-*.mjs` | Automated checks |
+| `analysis/autoplay/` | Balance simulation: bots play the real game thousands of times; results and a plain report are in `analysis/autoplay/results/REPORT.md` |
 | `build.mjs` | Packs the game and server into `dist/` for deployment |
 | `TELEMETRY-v16.md` | What optional play analytics collects and how the operator exports it |
 
