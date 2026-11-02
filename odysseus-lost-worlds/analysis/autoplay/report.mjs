@@ -32,29 +32,35 @@ function build(S, L) {
   // ---------- facts used in the summary sentences
   const lost = skills.flatMap(s => D.map(d => [s, d, cell(d, s)])).filter(([, , c]) => c.outcomes.clear < c.n);
   const allRuns = skills.reduce((a, s) => a + D.reduce((b, d) => b + cell(d, s).n, 0), 0);
-  let endsEarly = 0, endsTotal = 0;
-  for (const s of skills) for (const d of D) for (const st of cell(d, s).stages) { endsTotal += st.endedHere; if (st.stage <= 3) endsEarly += st.endedHere; }
+  // Where lost runs ended (last life lost), for a set of bots: {stage: runs}
+  const endsFor = list => { const e = {}; for (const s of list) for (const d of D) for (const st of cell(d, s).stages) if (st.endedHere) e[st.stage] = (e[st.stage] || 0) + st.endedHere; return e; };
+  const endsText = (e, L) => Object.entries(e).sort((a, b) => b[1] - a[1]).map(([s, n]) => `${L ? STAGE_KO[s] : STAGE_SHORT[s]} ${n}`).join(', ');
+  const endsAll = endsFor(skills), endsTotal = Object.values(endsAll).reduce((a, b) => a + b, 0);
+  const bossEnds = e => Object.entries(e).filter(([s]) => BOSS_STAGES[s]).reduce((a, [, n]) => a + n, 0);
   const deathsBy = (s, from, to) => D.reduce((a, d) => a + cell(d, s).stages.filter(st => st.stage >= from && st.stage <= to).reduce((b, st) => b + st.deaths, 0), 0);
   const stuck = skills.reduce((a, s) => a + D.reduce((b, d) => b + cell(d, s).outcomes.stuck + cell(d, s).outcomes.timeout, 0), 0);
 
   P(t('# Autoplay balance report', '# 자동 플레이 밸런스 보고서'),
     t('**English** · [한국어](REPORT.ko.md)', '[English](REPORT.md) · **한국어**'),
-    t(`Bots played the real game code (${S.meta.gameVersion?.version ?? 'v17'} \`game.js\` and friends, unchanged) **${allRuns.toLocaleString('en')} times**: ${D.length} difficulties × ${skills.length} bot skill levels × ${S.meta.runsPerCell} seeds each. Every run is a full journey with 3 lives and the game's own "continue" after a death, exactly like the page. The goal is to see *where* the game is hard, not to replace real players.${S.meta.verified ? ` Game code: ${S.meta.gameVersion.version} (commit \`${S.meta.gameVersion.commit}\`); ${S.meta.verified.runs} of the same seeds replayed on ${S.meta.verified.version} (\`${S.meta.verified.commit}\`) gave identical results, so the numbers also hold for ${S.meta.verified.version}.` : ''}`,
-      `봇이 실제 게임 코드(${S.meta.gameVersion?.version ?? 'v17'} \`game.js\` 등, 수정 없음)를 **${allRuns.toLocaleString('en')}판** 플레이했습니다: 난이도 ${D.length}개 × 봇 실력 ${skills.length}단계 × 시드 ${S.meta.runsPerCell}개. 한 판은 목숨 3개로 처음부터 끝까지 진행하며, 죽으면 페이지와 똑같이 게임의 "이어하기"로 재도전합니다. 목적은 실제 플레이어를 대신하는 것이 아니라 *어디가* 어려운지 보는 것입니다.${S.meta.verified ? ` 게임 코드: ${S.meta.gameVersion.version}(커밋 \`${S.meta.gameVersion.commit}\`). 같은 시드 ${S.meta.verified.runs}판을 ${S.meta.verified.version}(\`${S.meta.verified.commit}\`)에서 다시 돌려 완전히 같은 결과가 나왔으므로, 이 숫자는 ${S.meta.verified.version}에도 그대로 맞습니다.` : ''}`));
+    t(`Bots played the real game code (${S.meta.gameVersion?.version ?? 'v17'} \`game.js\` and friends, unchanged) **${allRuns.toLocaleString('en')} times**: ${D.length} difficulties × ${skills.length} bot skill levels × ${S.meta.runsPerCell} seeds each. Every run is a full journey with 3 lives and a retry in the same fight after each death (the game's death screen button), exactly like the page. The goal is to see *where* the game is hard, not to replace real players.${S.meta.verified ? ` Game code: ${S.meta.gameVersion.version} (commit \`${S.meta.gameVersion.commit}\`); ${S.meta.verified.runs} of the same seeds replayed on ${S.meta.verified.version} (\`${S.meta.verified.commit}\`) gave identical results, so the numbers also hold for ${S.meta.verified.version}.` : ''}`,
+      `봇이 실제 게임 코드(${S.meta.gameVersion?.version ?? 'v17'} \`game.js\` 등, 수정 없음)를 **${allRuns.toLocaleString('en')}판** 플레이했습니다: 난이도 ${D.length}개 × 봇 실력 ${skills.length}단계 × 시드 ${S.meta.runsPerCell}개. 한 판은 목숨 3개로 처음부터 끝까지 진행하며, 죽을 때마다 페이지와 똑같이 사망 화면의 버튼으로 같은 전투를 재도전(retry)합니다. 목적은 실제 플레이어를 대신하는 것이 아니라 *어디가* 어려운지 보는 것입니다.${S.meta.verified ? ` 게임 코드: ${S.meta.gameVersion.version}(커밋 \`${S.meta.gameVersion.commit}\`). 같은 시드 ${S.meta.verified.runs}판을 ${S.meta.verified.version}(\`${S.meta.verified.commit}\`)에서 다시 돌려 완전히 같은 결과가 나왔으므로, 이 숫자는 ${S.meta.verified.version}에도 그대로 맞습니다.` : ''}`));
 
   // ---------- key findings
   P(t('## Key findings', '## 핵심 결과'));
   const f = [];
   const full = main.filter(s => D.every(d => cell(d, s).clearRate.p === 1));
-  if (full.length) f.push(t(`**${full.map(skillName).join(' and ')} bots cleared every run on every difficulty.** For a player who reacts in about 0.3 s and makes the average bot's share of mistakes, no difficulty is hard enough to end a run.`,
-    `**${full.map(skillName).join(', ')} 봇은 모든 난이도에서 모든 판을 클리어했습니다.** 반응 약 0.3초에 보통 봇만큼 실수하는 플레이어라면, 어느 난이도도 판을 끝낼 만큼 어렵지 않습니다.`));
+  if (full.length) f.push(t(`**${full.map(skillName).join(' and ')} bots cleared every run on every difficulty.** By the average bot's standard (about 0.3 s reactions and the mistake rates below), no difficulty is hard enough to end a run. How real players fare is not measured here.`,
+    `**${full.map(skillName).join(', ')} 봇은 모든 난이도에서 모든 판을 클리어했습니다.** 보통 봇 기준(반응 약 0.3초, 아래 표의 실수 비율)으로는 어느 난이도도 판을 끝낼 만큼 어렵지 않습니다. 실제 사람이 어떤지는 여기서 잰 것이 아닙니다.`));
   for (const s of main.filter(s => !full.includes(s))) {
     const worst = D.map(d => [d, cell(d, s).clearRate]).sort((a, b) => a[1].p - b[1].p)[0];
     f.push(t(`**${skillName(s)} bots** clear ${D.map(d => `${diffName(d)} ${pct(cell(d, s).clearRate.p)}`).join(', ')}. The lowest is ${diffName(worst[0])}: ${ci(worst[1])}.`,
       `**${skillName(s)} 봇** 클리어율: ${D.map(d => `${diffName(d)} ${pct(cell(d, s).clearRate.p)}`).join(', ')}. 가장 낮은 곳은 ${diffName(worst[0])}: ${ci(worst[1])}.`));
   }
-  if (endsTotal) f.push(t(`**${pct(endsEarly / endsTotal)} of all lost runs (${endsEarly} of ${endsTotal}) ended in the first three fighting stages** (G1 Cyclops Ruins, Polyphemus, Poseidon).`,
-    `**실패한 판의 ${pct(endsEarly / endsTotal)}(${endsTotal}판 중 ${endsEarly}판)가 처음 세 전투 스테이지**(G1 키클롭스 폐허, 폴리페모스, 포세이돈)에서 끝났습니다.`));
+  if (endsTotal) {
+    const nov = main.includes('novice') ? endsFor(['novice']) : null, novTotal = nov ? Object.values(nov).reduce((a, b) => a + b, 0) : 0, refN = refs.length ? Object.values(endsFor(refs)).reduce((a, b) => a + b, 0) : 0;
+    f.push(t(`**Runs end at bosses, mostly Poseidon and Polyphemus.** ${endsTotal} runs were lost in all (${refN} of them by reference bots); ${bossEnds(endsAll)} (${pct(bossEnds(endsAll) / endsTotal)}) ended at a boss: ${endsText(endsAll, 0)}.${nov && novTotal ? ` Novice bots alone: ${novTotal} lost runs, ended at ${endsText(nov, 0)}.` : ''} Many lives are lost earlier, in G1 Cyclops Ruins, but the run goes on with the next life; the last life is usually lost at the next boss.`,
+      `**판이 끝나는 곳은 보스, 주로 포세이돈과 폴리페모스입니다.** 실패한 판은 모두 ${endsTotal}판(그중 기준 봇 ${refN}판)이고, ${bossEnds(endsAll)}판(${pct(bossEnds(endsAll) / endsTotal)})이 보스에서 끝났습니다: ${endsText(endsAll, 1)}.${nov && novTotal ? ` 초보 봇만 보면 실패 ${novTotal}판, 끝난 곳: ${endsText(nov, 1)}.` : ''} 목숨은 그보다 앞선 G1 키클롭스 폐허에서도 많이 잃지만 다음 목숨으로 계속 가고, 마지막 목숨은 대개 그다음 보스에서 잃습니다.`));
+  }
   for (const s of main) {
     const early = deathsBy(s, 1, 3), late = deathsBy(s, 4, 10);
     if (early + late === 0) continue;
@@ -138,8 +144,8 @@ function build(S, L) {
 
   // ---------- 3. boss deaths per attempt
   P(t('## 3. Deaths per boss attempt', '## 3. 보스 도전 1회당 사망률'),
-    t('An attempt is one life that enters the boss fight (the first entry or a continue). The rate is lives lost at that boss ÷ attempts, with the 95% interval and the raw counts. Attempts within one run are not fully independent, so read the interval as approximate.',
-      '도전 1회는 보스전에 들어간 목숨 하나입니다(처음 입장 또는 이어하기). 비율 = 그 보스에서 잃은 목숨 ÷ 도전 횟수이며, 95% 구간과 실제 횟수를 함께 적었습니다. 한 판 안의 도전들은 완전히 독립이 아니므로 구간은 대략적인 값으로 보세요.'));
+    t('An attempt is one life that enters the boss fight (the first entry or a retry after a death). The rate is lives lost at that boss ÷ attempts, with the 95% interval and the raw counts. Attempts within one run are not fully independent, so read the interval as approximate.',
+      '도전 1회는 보스전에 들어간 목숨 하나입니다(처음 입장 또는 사망 후 재도전). 비율 = 그 보스에서 잃은 목숨 ÷ 도전 횟수이며, 95% 구간과 실제 횟수를 함께 적었습니다. 한 판 안의 도전들은 완전히 독립이 아니므로 구간은 대략적인 값으로 보세요.'));
   for (const s of main) {
     const any = D.some(d => BOSSES.some(b => cell(d, s).bosses[b].deaths));
     if (!any) { P(t(`- **${skillName(s)}**: no deaths at any boss on any difficulty.`, `- **${skillName(s)}**: 어느 난이도, 어느 보스에서도 사망 없음.`)); continue; }
@@ -222,7 +228,8 @@ function build(S, L) {
 **Cannot:**
 - **Bots are not people.** They know exactly where every hit box is (with a set error), never get confused by the screen, never panic, never learn, and never quit out of boredom. People also jump and switch weapons; these bots never do.
 - **The skill levels are assumptions.** Reaction times and mistake rates were chosen by hand, not measured. A different but equally reasonable choice could move the clear rates a lot. Treat the numbers as **relative** (which stage is harder than which), not as "X% of players will clear".
-- **No real player data backs this yet.** The live site has about 110 page views and no finished run, which is too little to check the bots against.
+- **Bots read the screen perfectly.** They know each enemy's wind-up time as an exact number and also notice projectiles that are still off screen.
+- **No real player data backs this yet.** As checked on 2026-10-25, the live site had about 110 page views and no finished run, which is too little to check the bots against.
 - The page itself is not drawn (no rendering), and the game runs at a fixed 60 steps per second. Game rules are unchanged, but rendering normally uses the random number generator for screen shake, so a seed here does not match a seed in a browser.
 - Confidence intervals cover only the randomness of the runs, not the uncertainty in the bot models.`,
       `**알 수 있는 것:** *같은 봇* 기준으로 스테이지·보스·난이도를 서로 비교하기, 피해와 사망이 어디에 몰리는지, 난이도 한 단계가 결과를 얼마나 바꾸는지, 밸런스를 바꾼 뒤 똑같이 다시 재 보기(같은 시드는 같은 판을 만듭니다).
@@ -230,7 +237,8 @@ function build(S, L) {
 **알 수 없는 것:**
 - **봇은 사람이 아닙니다.** 봇은 정해진 오차 안에서 모든 판정 범위를 정확히 알고, 화면에 헷갈리지 않고, 당황하지 않고, 배우지 않고, 지루해서 그만두지도 않습니다. 사람은 점프하고 무기를 바꾸기도 하지만 이 봇들은 그러지 않습니다.
 - **실력 단계는 가정입니다.** 반응 시간과 실수 비율은 직접 정한 값이지 잰 값이 아닙니다. 똑같이 그럴듯한 다른 값을 고르면 클리어율이 크게 달라질 수 있습니다. 숫자는 "플레이어의 X%가 클리어한다"가 아니라 **상대 비교**(어느 스테이지가 더 어려운가)로 보세요.
-- **아직 실제 플레이어 데이터로 확인하지 못했습니다.** 라이브 사이트는 페이지 뷰 약 110회에 끝까지 간 판이 없어 봇과 비교하기에 너무 적습니다.
+- **봇은 화면을 완벽하게 읽습니다.** 적의 공격 준비 시간을 정확한 숫자로 알고, 아직 화면 밖에 있는 투사체도 알아챕니다.
+- **아직 실제 플레이어 데이터로 확인하지 못했습니다.** 2026-10-25 확인 기준 라이브 사이트는 페이지 뷰 약 110회에 끝까지 간 판이 없어 봇과 비교하기에 너무 적습니다.
 - 화면은 그리지 않고(렌더링 없음), 게임은 초당 60스텝 고정으로 돌립니다. 게임 규칙은 그대로지만 브라우저에서는 화면 흔들림에도 난수를 쓰므로, 여기의 시드와 브라우저의 판은 일치하지 않습니다.
 - 신뢰구간은 판마다의 무작위성만 반영하며, 봇 모델 자체의 불확실성은 반영하지 않습니다.`));
 

@@ -2,13 +2,13 @@
 
 **English** · [한국어](REPORT.ko.md)
 
-Bots played the real game code (v17 `game.js` and friends, unchanged) **4,800 times**: 4 difficulties × 6 bot skill levels × 200 seeds each. Every run is a full journey with 3 lives and the game's own "continue" after a death, exactly like the page. The goal is to see *where* the game is hard, not to replace real players. Game code: v17 (commit `55539e0`); 240 of the same seeds replayed on v19 (`14dfc20`) gave identical results, so the numbers also hold for v19.
+Bots played the real game code (v17 `game.js` and friends, unchanged) **4,800 times**: 4 difficulties × 6 bot skill levels × 200 seeds each. Every run is a full journey with 3 lives and a retry in the same fight after each death (the game's death screen button), exactly like the page. The goal is to see *where* the game is hard, not to replace real players. Game code: v17 (commit `55539e0`); 240 of the same seeds replayed on v19 (`14dfc20`) gave identical results, so the numbers also hold for v19.
 
 ## Key findings
 
-- **expert and average bots cleared every run on every difficulty.** For a player who reacts in about 0.3 s and makes the average bot's share of mistakes, no difficulty is hard enough to end a run.
+- **expert and average bots cleared every run on every difficulty.** By the average bot's standard (about 0.3 s reactions and the mistake rates below), no difficulty is hard enough to end a run. How real players fare is not measured here.
 - **novice bots** clear Ithaca (easy) 100%, Aegean (normal) 100%, Trial (hard) 90%, Wrath (extreme) 39%. The lowest is Wrath (extreme): 39% (32%–45%).
-- **98% of all lost runs (222 of 227) ended in the first three fighting stages** (G1 Cyclops Ruins, Polyphemus, Poseidon).
+- **Runs end at bosses, mostly Poseidon and Polyphemus.** 227 runs were lost in all (84 of them by reference bots); 227 (100%) ended at a boss: G3 Poseidon 194, G2 Polyphemus 28, E4 Cao Cao 5. Novice bots alone: 143 lost runs, ended at G3 Poseidon 110, G2 Polyphemus 28, E4 Cao Cao 5. Many lives are lost earlier, in G1 Cyclops Ruins, but the run goes on with the next life; the last life is usually lost at the next boss.
 - For **novice** bots, 752 deaths happened in G1–G3 and 5 in all later stages together. The player gains +8% attack per stage and +20 max HP per boss, so the later stages get easier for the same bot.
 - **Deadliest boss:** Poseidon for novice bots on Wrath (extreme): 64% (57%–70%) of lives that entered the fight were lost there (145 of 227).
 - **Expert bots lose almost no HP** (1 / 3 / 7 / 20 HP per whole journey on Ithaca (easy) / Aegean (normal) / Trial (hard) / Wrath (extreme)). They hold S toward bosses, which blocks every boss attack including water bombs and arrow rain, and they fire a finisher whenever a boss or a group is in reach.
@@ -107,7 +107,7 @@ Each cell: share of runs that **entered** the stage, then how many runs **ended*
 
 ## 3. Deaths per boss attempt
 
-An attempt is one life that enters the boss fight (the first entry or a continue). The rate is lives lost at that boss ÷ attempts, with the 95% interval and the raw counts. Attempts within one run are not fully independent, so read the interval as approximate.
+An attempt is one life that enters the boss fight (the first entry or a retry after a death). The rate is lives lost at that boss ÷ attempts, with the 95% interval and the raw counts. Attempts within one run are not fully independent, so read the interval as approximate.
 
 - **expert**: no deaths at any boss on any difficulty.
 
@@ -219,7 +219,8 @@ These are places where the numbers stand out. They are questions for play-testin
 **Cannot:**
 - **Bots are not people.** They know exactly where every hit box is (with a set error), never get confused by the screen, never panic, never learn, and never quit out of boredom. People also jump and switch weapons; these bots never do.
 - **The skill levels are assumptions.** Reaction times and mistake rates were chosen by hand, not measured. A different but equally reasonable choice could move the clear rates a lot. Treat the numbers as **relative** (which stage is harder than which), not as "X% of players will clear".
-- **No real player data backs this yet.** The live site has about 110 page views and no finished run, which is too little to check the bots against.
+- **Bots read the screen perfectly.** They know each enemy's wind-up time as an exact number and also notice projectiles that are still off screen.
+- **No real player data backs this yet.** As checked on 2026-10-25, the live site had about 110 page views and no finished run, which is too little to check the bots against.
 - The page itself is not drawn (no rendering), and the game runs at a fixed 60 steps per second. Game rules are unchanged, but rendering normally uses the random number generator for screen shake, so a seed here does not match a seed in a browser.
 - Confidence intervals cover only the randomness of the runs, not the uncertainty in the bot models.
 

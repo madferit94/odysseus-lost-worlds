@@ -80,7 +80,7 @@ For development checks, use Node.js 24 or later in the game folder: `npm test` (
 ## Balance simulation
 
 To see where the game is hard without enough real player data, bots played the real game code 4,800 times (4 difficulties × expert, average and novice bots plus three comparison bots, 200 runs each).
-Expert and average bots finished every run on every difficulty; the novice bot finished 39% of runs on Poseidon's Wrath (extreme), and 98% of all failed runs ended in the first three fights (Cyclops Ruins, Polyphemus, Poseidon).
+By these bots' standard, expert and average bots finished every run on every difficulty, and the novice bot finished 39% of runs on Poseidon's Wrath (extreme). Novice bots lose many lives in the first fight (Cyclops Ruins), but their runs end at bosses: of 143 lost novice runs, 110 ended at Poseidon, 28 at Polyphemus and 5 at Cao Cao.
 Bots are not people: their skill levels are guesses, so use the numbers to compare stages and difficulties, not to predict how many players will finish.
 Full tables, how the bots work and how to rerun it: [balance report](odysseus-lost-worlds/analysis/autoplay/results/REPORT.md).
 
