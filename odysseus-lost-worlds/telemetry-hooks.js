@@ -18,6 +18,12 @@
   if(c){telemetry.begin(c.difficulty,'continue');attempt=0;stageDone=false;bossStartedAt=null;ended=false;ready.clear();
    telemetry.emit('game_start',{activeMs:0,stage:c.stage,attempt:0,hp:c.maxHP,energy:Math.floor(c.energy),lives:c.lives,damageTaken:Math.round(c.runStats.damageTaken),normalKills:c.runStats.normalKills,bossKills:c.runStats.bossKills,retries:c.runStats.retries});}
   return originalContinue(...args);};}
+ // v19: a boss practice is its own analytics session marked 'practice'.
+ if(typeof startBossPractice==='function'){const originalPractice=startBossPractice;startBossPractice=function(id,...args){
+  const plan=typeof practicePlan==='function'?practicePlan(id):null;
+  if(plan){telemetry.begin(selectedDifficulty,'practice');attempt=0;stageDone=false;bossStartedAt=null;ended=false;ready.clear();
+   telemetry.emit('game_start',{activeMs:0,stage:plan.stage,attempt:0,hp:plan.maxHP,energy:0,lives:plan.lives,damageTaken:0,normalKills:0,bossKills:0,retries:0});}
+  return originalPractice(id,...args);};}
  // Leaving the prologue on foot completes it; starting a continued journey (from a menu screen) does not.
  const originalEnter=enter;enter=function(s){if(p&&s===1&&stage===0&&state==='play')complete();const result=originalEnter(s);attempt=0;stageDone=false;bossStartedAt=null;event('stage_start');bossBegin();observeReady();return result;};
  const originalResume=resumeBattle;resumeBattle=function(...args){const result=originalResume(...args);if(result){attempt++;ready.clear();event('retry');event('stage_start');bossBegin();observeReady();}return result;};

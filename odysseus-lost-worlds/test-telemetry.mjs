@@ -92,7 +92,7 @@ test('boss victory, stage complete, epilogue and pause timing are measured',asyn
 
 test('v19 sessions record how the journey began; older pages and rows count as new journeys',async()=>{
  const {env,sqlite}=database();
- for(const mode of ['normal','continue']){const m={...metadata(),version:'v19',mode};assert.equal((await api(request('/api/telemetry/start',m),env)).status,201);assert.equal(sqlite.prepare('SELECT mode FROM play_sessions WHERE id=?').get(m.id).mode,mode);}
+ for(const mode of ['normal','continue','practice']){const m={...metadata(),version:'v19',mode};assert.equal((await api(request('/api/telemetry/start',m),env)).status,201);assert.equal(sqlite.prepare('SELECT mode FROM play_sessions WHERE id=?').get(m.id).mode,mode);}
  const old={...metadata(),version:'v18'};assert.equal((await api(request('/api/telemetry/start',old),env)).status,201);assert.equal(sqlite.prepare('SELECT mode FROM play_sessions WHERE id=?').get(old.id).mode,'normal');
  for(const mode of ['practice-x','','Continue',1])assert.equal((await api(request('/api/telemetry/start',{...metadata(),version:'v19',mode}),env)).status,400,String(mode));
  // Rows written before the migration (no mode column value) read as 'normal'.

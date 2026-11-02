@@ -40,6 +40,7 @@ function startRankRun(difficulty=typeof runDifficulty==='string'?runDifficulty:n
 function unrankedMessage(mode){
  const ko=typeof controlLanguage==='string'&&controlLanguage==='ko';
  return mode==='continue'?(ko?'이어한 여정은 순위에 등록되지 않습니다. 순위에 도전하려면 새 게임을 시작하세요.':'This is a continued journey, so it is not ranked. Start a new game to enter the rankings.')
+  :mode==='practice'?(ko?'보스 연습은 순위에 등록되지 않습니다.':'Boss practice is not ranked.')
   :(ko?'이 플레이는 순위에 등록되지 않습니다.':'This play is not ranked.');
 }
 // Drops any ranked run this page started earlier, so it can never be submitted for an unranked journey.
@@ -49,10 +50,19 @@ async function finishRankRun(result,mode='normal'){
  const generation=rankGeneration;rankPending=result;await rankStarting;if(generation!==rankGeneration)return;
  if(!rankRunId){rankStatus.textContent='Journey complete. This run could not connect to online rankings.';return;}
  showRankBoard(rankRunDifficulty||'legacy');
- rankForm.hidden=false;rankStatus.textContent='You made it home! Enter a nickname to save your result.';
+ rankForm.hidden=false;rankStatus.textContent='You made it home! Enter a nickname to save your result.';rankWaitingChanged();
 }
 function rankAttr(el,name,value){if(typeof el.setAttribute==='function')el.setAttribute(name,value);}
 // Tab labels follow the page language (controlLanguage from ui.js).
+// A finished ranked journey waits here until it is saved or skipped. Boss practice
+// (practice.js) stays locked meanwhile, so starting one cannot silently drop it.
+function rankResultWaiting(){return !!(rankPending&&rankRunId);}
+function rankWaitingChanged(){if(typeof refreshPracticeMenu==='function')refreshPracticeMenu();if(typeof refreshContinueButton==='function')refreshContinueButton();}
+function skipRankResult(){
+ if(!rankResultWaiting())return false;rankPending=null;rankForm.hidden=true;
+ rankStatus.textContent=typeof controlLanguage==='string'&&controlLanguage==='ko'?'이 결과는 순위에 저장하지 않았습니다.':'This result was not saved to the rankings.';
+ rankWaitingChanged();return true;
+}
 function refreshRankTabs(){
  const ko=typeof controlLanguage==='string'&&controlLanguage==='ko';
  const group=document.getElementById('rank-tabs');rankAttr(group,'aria-label',ko?'난이도별 순위':'Rankings by difficulty');
@@ -60,6 +70,7 @@ function refreshRankTabs(){
   const tab=document.getElementById('rank-tab-'+id);tab.textContent=ko?label.ko:label.en;tab.lang=ko?'ko':'en';
   rankAttr(tab,'aria-pressed',String(id===rankBoard));tab.className='rank-tab'+(id===rankBoard?' rank-tab-current':'')+(id==='legacy'?' rank-tab-legacy':'');
  }
+ const skip=document.getElementById('rank-skip');skip.textContent=ko?'저장하지 않고 건너뛰기':'Skip, do not save';skip.lang=ko?'ko':'en';
 }
 // Switches the board at once; the list loads after the browser identity request (first load) is done.
 function showRankBoard(id){if(!RANK_BOARD_IDS.includes(id))return null;rankBoard=id;refreshRankTabs();return rankIdentityReady.then(()=>loadRanking());}
@@ -79,12 +90,13 @@ async function loadRanking(){
 }
 rankForm.addEventListener('submit',async event=>{
  event.preventDefault();if(!rankPending||!rankRunId)return;rankSave.disabled=true;rankStatus.textContent='Saving your journey…';
- try{const result=await rankRequest('/api/results',{...rankPending,runId:rankRunId,nickname:document.getElementById('rank-name').value});rankStatus.textContent='Saved! Your ranking score: '+result.score.toLocaleString()+'.';rankForm.hidden=true;
+ try{const result=await rankRequest('/api/results',{...rankPending,runId:rankRunId,nickname:document.getElementById('rank-name').value});rankStatus.textContent='Saved! Your ranking score: '+result.score.toLocaleString()+'.';rankForm.hidden=true;rankPending=null;rankWaitingChanged();
   // Show the board of the difficulty the server stored for this journey.
   rankBoard=rankDifficulty(result.difficulty)||(result.difficulty===null?'legacy':rankBoard);refreshRankTabs();await loadRanking();}
  catch(error){rankStatus.textContent=error.message;
   // A rejected result cannot pass on a second try, so the form closes; nickname and busy errors can be fixed.
-  if(error.status===422||['clock_mismatch','invalid_result'].includes(error.code)){rankForm.hidden=true;rankPending=null;}else rankSave.disabled=false;}
+  if(error.status===422||['clock_mismatch','invalid_result'].includes(error.code)){rankForm.hidden=true;rankPending=null;rankWaitingChanged();}else rankSave.disabled=false;}
 });
+document.getElementById('rank-skip').addEventListener('click',()=>skipRankResult());
 for(const id of RANK_BOARD_IDS)document.getElementById('rank-tab-'+id).onclick=()=>showRankBoard(id);
 document.getElementById('rank-refresh').addEventListener('click',async()=>{await rankIdentityReady;await loadRanking();});refreshRankTabs();rankIdentityReady=loadRanking();

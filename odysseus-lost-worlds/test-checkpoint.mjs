@@ -1,32 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import vm from 'node:vm';
 
-// v19 continue (checkpoint.js) on top of the real game scripts, with a small fake DOM,
-// a fake localStorage, a fake ranking server and a recording analytics stub.
-function memoryStorage(){const data=new Map();return{data,getItem:k=>data.has(k)?data.get(k):null,setItem:(k,v)=>{data.set(k,String(v));},removeItem:k=>{data.delete(k);}};}
-function world({storage=memoryStorage(),storageThrows=false}={}){
- const noop=()=>{},draw=new Proxy({},{get:()=>noop,set:()=>true}),elements=new Map(),requests=[],analytics=[];
- const element=id=>{if(!elements.has(id))elements.set(id,{id,textContent:'',innerHTML:'',value:'Hero',hidden:false,disabled:false,lang:'',className:'',children:[],attributes:{},events:{},
-  getContext:()=>draw,classList:{add:noop,remove:noop,contains:()=>false},focus:noop,setAttribute(k,v){this.attributes[k]=String(v);},getAttribute(k){return this.attributes[k]??null;},
-  addEventListener(k,f){this.events[k]=f;},appendChild(c){this.children.push(c);},replaceChildren(){this.children=[];}});return elements.get(id);};
- const reply=data=>({ok:true,status:200,headers:{get:()=>null},json:async()=>data});
- const ctx={console,Math,JSON,Date,Image:class{constructor(){this.complete=false;this.naturalWidth=0;}},requestAnimationFrame:noop,
-  document:{getElementById:element,addEventListener:noop,createElement:()=>({children:[],textContent:'',appendChild(c){this.children.push(c);}})},
-  window:{addEventListener:noop,matchMedia:()=>({matches:false})},
-  fetch:async(path,opts)=>{const body=opts?.body?JSON.parse(opts.body):undefined;requests.push({path,body});
-   if(path==='/api/runs')return reply({runId:'00000000-0000-4000-8000-00000000000'+requests.length%10,difficulty:body.difficulty??null});
-   if(path==='/api/results')return reply({score:1,difficulty:'aegean'});return reply({entries:[],myBest:null});}};
- if(storageThrows)Object.defineProperty(ctx,'localStorage',{get(){throw Error('SecurityError');}});else ctx.localStorage=storage;
- const context=vm.createContext(ctx);
- for(const file of ['art.js','gods.js','achilles.js','caocao.js','weapons.js','progression.js','combat.js','characters.js','ui.js','game.js','checkpoint.js','ranking.js'])vm.runInContext(fs.readFileSync(new URL(file,import.meta.url),'utf8'),context);
- context.telemetry={begin:(difficulty,mode='normal')=>analytics.push({begin:difficulty,mode}),emit:(name,snapshot)=>analytics.push({name,...snapshot}),flush:noop,display:noop};
- vm.runInContext(fs.readFileSync(new URL('telemetry-hooks.js',import.meta.url),'utf8'),context);
- const run=s=>vm.runInContext('(()=>{'+s+'})()',context);run('audio=()=>{};');
- return {run,el:element,storage,requests,analytics,saved:()=>{const raw=storage.getItem('odysseus-checkpoint-v1');return raw?JSON.parse(raw):null;}};
-}
-const settle=()=>new Promise(r=>setImmediate(r));
+import {memoryStorage,world,settle} from './game-world.mjs';
+
 // Plays the real route to the start of stage 3 (Poseidon): clears G1, beats Polyphemus, spends energy.
 const toPoseidon=`selectDifficulty('trial');reset();enter(1);p.x=455;update(.02);for(let w=0;w<cfg().waves;w++){enemies.forEach(e=>damage(e,9999,0,true));for(let i=0;i<75;i++)update(.02);}
  enter(2);damage(enemies[0],9999,0,true);update(.02);switchWeapon(2);update(.02);p.energy=137;
@@ -99,7 +76,7 @@ test('the game works when storage is blocked, and broken or edited checkpoints a
 });
 test('index.html offers continue as a keyboard button with a note, and loads checkpoint.js before ranking and analytics',()=>{
  const html=fs.readFileSync(new URL('index.html',import.meta.url),'utf8');
- assert.match(html,/<button id="continue" type="button" hidden aria-describedby="continue-note"><\/button><p id="continue-note" class="continue-note" role="note" hidden><\/p>/);
+ assert.match(html,/<button id="continue" type="button" hidden aria-describedby="continue-note"><\/button>/);assert.match(html,/<p id="continue-note" class="continue-note" role="note" hidden><\/p>/);
  assert.match(html,/\.panel #continue\{[^}]*max-width:100%;white-space:normal/,'long labels wrap on a 390px screen');
  const order=[...html.matchAll(/<script src="([\w-]+\.js)">/g)].map(m=>m[1]);
  assert.ok(order.indexOf('game.js')<order.indexOf('checkpoint.js')&&order.indexOf('checkpoint.js')<order.indexOf('ranking.js')&&order.indexOf('checkpoint.js')<order.indexOf('telemetry-hooks.js'));

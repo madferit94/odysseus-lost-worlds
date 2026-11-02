@@ -39,8 +39,11 @@ function writeCheckpoint(){
  const store=checkpointStorage();if(!c||!store)return false;
  try{store.setItem(CHECKPOINT_KEY,JSON.stringify({...c,version:GAME_VERSION,savedAt:Date.now()}));return true;}catch{return false;}
 }
+// True while a finished ranked journey waits for its nickname (ranking.js); continuing
+// then would drop that result, for example when another tab saved a checkpoint.
+const continueBlocked=()=>typeof rankResultWaiting==='function'&&rankResultWaiting();
 function continueJourney(){
- const c=readCheckpoint();if(!c||!['title','gameover','end'].includes(state))return false;
+ const c=readCheckpoint();if(!c||!['title','gameover','end'].includes(state)||continueBlocked())return false;
  journeyMode='continue';runDifficulty=c.difficulty;
  p=freshHero();p.maxHP=c.maxHP;p.hp=c.maxHP;p.energy=c.energy;p.shield=c.shield;p.weapon=c.weapon;
  lives=c.lives;score=c.score;kills=c.kills;bossRewards=new Set(c.bossRewards);runStats={...c.runStats};relic=c.relic;finalBlessing=false;
@@ -56,8 +59,10 @@ function refreshContinueButton(){
  const c=['title','gameover','end'].includes(state)?readCheckpoint():null,ko=controlLanguage==='ko';
  button.hidden=note.hidden=!c;
  if(!c)return;
+ const blocked=continueBlocked();button.disabled=blocked;
  button.textContent=continueLabel(c,ko);button.lang=note.lang=controlLanguage;
- note.textContent=ko?'이어한 여정은 순위에 등록되지 않습니다. 순위에 도전하려면 새 게임을 시작하세요.':'Continued journeys are not ranked. Start a new game to enter the rankings.';
+ note.textContent=blocked?(ko?'이어하기를 하려면 먼저 아래 순위에 결과를 저장하거나 건너뛰세요.':'To continue, first save your result to the rankings below, or skip it.')
+  :(ko?'이어한 여정은 순위에 등록되지 않습니다. 순위에 도전하려면 새 게임을 시작하세요.':'Continued journeys are not ranked. Start a new game to enter the rankings.');
 }
 document.getElementById('continue').onclick=()=>continueJourney();
 refreshContinueButton();
