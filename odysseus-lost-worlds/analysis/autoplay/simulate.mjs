@@ -52,11 +52,24 @@ async function main() {
   for (const difficulty of difficulties) for (const skill of skills) for (let i = 0; i < runs; i++) tasks.push({difficulty, skill, seed: firstSeed + i});
   console.log(`Playing ${tasks.length} runs (${difficulties.length} difficulties x ${skills.length} skills x ${runs} seeds) on ${workers} workers...`);
   const started = Date.now();
-  const chunks = Array.from({length: workers}, (_, w) => tasks.filter((_, i) => i % workers === w));
-  const parts = await Promise.all(chunks.filter(c => c.length).map(chunk => new Promise((resolve, reject) => {
+  // Small chunks, one fresh worker per chunk: keeps all cores busy to the end and stops
+  // vm sandboxes from piling up in one long-lived worker (that slowed a 4,800-run batch to a crawl).
+  const CHUNK = 40, chunks = [];
+  for (let i = 0; i < tasks.length; i += CHUNK) chunks.push(tasks.slice(i, i + CHUNK));
+  const parts = [];
+  let next = 0, done = 0;
+  const runChunk = chunk => new Promise((resolve, reject) => {
     const w = new Worker(fileURLToPath(import.meta.url), {workerData: {tasks: chunk}});
     w.once('message', resolve); w.once('error', reject);
-  })));
+  });
+  await Promise.all(Array.from({length: Math.min(workers, chunks.length)}, async () => {
+    while (next < chunks.length) {
+      const chunk = chunks[next++];
+      parts.push(await runChunk(chunk));
+      done += chunk.length;
+      if (done % 400 < CHUNK) console.log(`  ${done} / ${tasks.length} runs, ${Math.round((Date.now() - started) / 1000)} s`);
+    }
+  }));
   const order = (r) => [difficulties.indexOf(r.difficulty), skills.indexOf(r.skill), r.seed];
   const results = parts.flat().sort((a, b) => { const x = order(a), y = order(b); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; });
   const seconds = (Date.now() - started) / 1000;
