@@ -18,6 +18,8 @@ export const playSessions=sqliteTable('play_sessions',{
  id:text('id').primaryKey(),tokenHash:text('token_hash').notNull(),startedAt:integer('started_at').notNull(),
  version:text('version').notNull(),difficulty:text('difficulty').notNull(),source:text('source').notNull(),
  isTest:integer('is_test').notNull(),consentVersion:text('consent_version').notNull(),
+ // v19: 'normal' (new journey), 'continue' (from a saved checkpoint). Sessions before v19 were all new journeys.
+ mode:text('mode').notNull().default('normal'),
 },t=>[index('idx_play_sessions_started').on(t.startedAt)]);
 export const playEvents=sqliteTable('play_events',{
  sessionId:text('session_id').notNull().references(()=>playSessions.id),seq:integer('seq').notNull(),receivedAt:integer('received_at').notNull(),

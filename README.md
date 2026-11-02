@@ -4,7 +4,7 @@
 
 A browser action game about finding your way home from Troy to Ithaca through the trials of the gods.
 
-**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Live game: **v16** · Repository: **v18 (not deployed)**
+**[Play the game](https://odysseus-lost-worlds.sooyeon-jun-0389.chatgpt.site/)** · Live game: **v16** · Repository: **v19 (not deployed)**
 
 ## About the game
 
@@ -16,6 +16,7 @@ Play as Odysseus after the Trojan War and journey home to Ithaca. Across 11 stag
 - **Survival:** Start with three lives. During boss fights, green healing zones appear at random times and locations; stand inside them to recover health.
 - **Scores and rankings:** Complete the journey to submit a score under a public nickname on the live site. No login is required. From v18 (not deployed yet), each difficulty has its own ranking.
 - **Four difficulty levels:** From Ithaca's Path (easy) to Poseidon's Wrath (extreme).
+- **Continue:** From v19 (not deployed yet), the game saves a checkpoint in your browser at each stage, so you can continue after a game over or a closed tab. Continued journeys are not ranked.
 - **Optional play analytics:** Anonymous stage, boss and death records are collected only after opt-in. Off by default. [Collection guide](odysseus-lost-worlds/TELEMETRY-v16.md)
 
 Designed for a computer and keyboard.
@@ -78,6 +79,7 @@ For development checks, use Node.js 24 or later in the game folder: `npm test` (
 ## Current limitations
 
 - The live game (v16) still has one online leaderboard for all difficulties. From v18 (repository only, not deployed yet), each difficulty has its own leaderboard; results with no recorded difficulty (saved before v18, or started from a page opened before the update) are listed separately as “Earlier records”.
+- Checkpoints for Continue (v19, repository only) are kept only in this browser. Clearing site data removes them, and continued journeys are not ranked.
 - Mobile touch controls are not supported; a computer keyboard is recommended.
 - Updating the GitHub files and updating the live game are separate operations.
 

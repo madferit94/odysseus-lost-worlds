@@ -384,3 +384,15 @@ test('switching tabs clears the previous board while loading and after a failed 
  page.control.intercept=null;await page.el('rank-tab-legacy').onclick();assert.match(page.el('rank-load').textContent,/no recorded difficulty: saved before v18, or started from a page opened before the update/);
  page.run("controlLanguage='ko'");await page.el('rank-tab-legacy').onclick();assert.match(page.el('rank-load').textContent,/난이도가 기록되지 않은 결과입니다\(v18 이전 기록 또는 업데이트 전에 열어 둔 페이지/);
 });
+
+// ---- Unranked play (v19) ------------------------------------------------------
+test('the server refuses to start or save a ranked run for a continued journey or practice',async()=>{
+ const v=visitor(),before=sqlite.prepare('SELECT count(*) n FROM runs').get().n;
+ for(const mode of ['continue','practice','anything']){const res=await v('/api/runs',{difficulty:'aegean',mode});assert.equal(res.status,400,mode);assert.equal((await res.json()).code,'unranked_mode');}
+ assert.equal(sqlite.prepare('SELECT count(*) n FROM runs').get().n,before,'no run row was created');
+ const {runId}=await startOn(v,'aegean');
+ for(const mode of ['continue','practice']){const res=await v('/api/results',{...botRun,runId,nickname:'Resumed',mode});assert.equal(res.status,400);assert.equal((await res.json()).code,'unranked_mode');assert.equal(submitted(runId),null);}
+ // A normal journey (with or without the field) is ranked as before.
+ assert.equal((await v('/api/results',{...botRun,runId,nickname:'Fresh Start',mode:'normal'})).status,200);
+ assert.equal((await v('/api/runs',{difficulty:'aegean',mode:'normal'})).status,201);
+});

@@ -6,6 +6,10 @@ const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:
 // Runs saved before v18 have no difficulty (NULL) and are listed as 'legacy'.
 export const RANK_DIFFICULTIES=Object.freeze(['ithaca','aegean','trial','wrath']);
 const RANK_BOARDS=[...RANK_DIFFICULTIES,'legacy'];
+// v19: only a new journey from the prologue is ranked. The game page never starts or
+// submits a run for a continued journey (or other unranked play); a request that
+// says it is one is refused, so a page bug cannot rank it either.
+const unranked=()=>json({error:'Continued journeys and practice are not ranked.',code:'unranked_mode'},400);
 function database(env){if(!env.DB)throw Error('Leaderboard database unavailable');return env.DB;}
 export function scoreRun(r){
  const combat=r.normalKills*100+r.bossKills*1200;
@@ -68,6 +72,7 @@ async function apiWithViewer(request,env,viewerKey){
    // later cannot change it. Pages from before v18 send no difficulty: those
    // runs are kept without one (listed with the earlier records).
    let start=null;try{start=await body(request);}catch{}
+   if((start?.mode??'normal')!=='normal')return unranked();
    const difficulty=start?.difficulty??null;
    if(difficulty!==null&&!RANK_DIFFICULTIES.includes(difficulty))return json({error:'Unknown difficulty. Please reload the game.',code:'invalid_difficulty'},400);
    const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
@@ -77,6 +82,7 @@ async function apiWithViewer(request,env,viewerKey){
   if(path==='/api/results'&&request.method==='POST'){
    let r;try{r=await body(request);}catch{return json({error:'The result could not be read.'},400);}
    if(!r||typeof r!=='object'||Array.isArray(r))return json({error:'The result could not be read.'},400);
+   if((r.mode??'normal')!=='normal')return unranked();
    if(typeof r.runId!=='string'||!/^[-a-z0-9]{36}$/.test(r.runId)||typeof r.nickname!=='string')return json({error:'Start a new journey before submitting.'},400);
    const named=checkNickname(r.nickname);if(!named.nickname)return json({error:named.error,code:named.code},400);const nickname=named.nickname;
    const run=await db.prepare('SELECT * FROM runs WHERE id=?').bind(r.runId).first();

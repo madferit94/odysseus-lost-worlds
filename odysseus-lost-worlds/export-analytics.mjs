@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-const sessionFields=['id','started_at','version','difficulty','source','is_test','consent_version'];
+const sessionFields=['id','started_at','version','difficulty','source','is_test','consent_version','mode'];
 const eventFields=['session_id','seq','received_at','name','active_ms','stage','attempt','hp','energy','lives','damage_taken','normal_kills','boss_kills','retries','god','boss','outcome','duration_ms'];
 const pick=(row,fields)=>Object.fromEntries(fields.map(key=>[key,row[key]??'']));
 export function prepareExport(sessions,events,{includeTests=false,now=Date.now()}={}){

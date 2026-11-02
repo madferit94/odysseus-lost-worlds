@@ -4,7 +4,7 @@
  const surface=document.createElement('section');surface.id='play-surface';surface.className='play-surface';
  surface.setAttribute('aria-label','Game display');layout.before(surface);
  const toolbar=document.createElement('div');toolbar.className='play-toolbar';
- toolbar.innerHTML='<span class="display-version">v17</span><button id="display-language" type="button"></button><button id="display-sound" type="button"></button><button id="display-guide" type="button" aria-expanded="false" aria-controls="guide-ko guide-en"></button><button id="display-fullscreen" type="button" aria-pressed="false"></button>';
+ toolbar.innerHTML='<span class="display-version">'+(typeof GAME_VERSION==='string'?GAME_VERSION:'')+'</span><button id="display-language" type="button"></button><button id="display-sound" type="button"></button><button id="display-guide" type="button" aria-expanded="false" aria-controls="guide-ko guide-en"></button><button id="display-fullscreen" type="button" aria-pressed="false"></button>';
  const status=document.createElement('p');status.id='display-status';status.className='display-status';status.setAttribute('role','status');
  surface.append(toolbar,layout,status);
  const guide=document.getElementById('display-guide'),full=document.getElementById('display-fullscreen'),sound=document.getElementById('display-sound'),language=document.getElementById('display-language');

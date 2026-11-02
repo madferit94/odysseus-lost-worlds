@@ -4,6 +4,8 @@ const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const EVENT_NAMES=new Set(['game_start','stage_start','stage_complete','player_death','retry','boss_start','boss_end','finisher_ready','finisher_use','game_clear','game_over','session_hidden','session_resumed','collection_stop']);
 const GODS=['','athena','achilles','hermes','zeus'];
 const SOURCES=['direct','x','reddit','linkedin','itch','other'];
+// v19: how the journey began. Pages before v19 send no mode; those are new journeys ('normal').
+const MODES=['normal','continue'];
 const int=(v,max)=>Number.isSafeInteger(v)&&v>=0&&v<=max;
 async function telemetryBody(request){
  if(!request.headers.get('content-type')?.includes('application/json'))throw Error('JSON required');
@@ -22,11 +24,12 @@ export async function telemetryApi(request,env){
   const db=env.DB;if(!db)throw Error('Missing DB');const now=Math.floor(Date.now()/1000),cutoff=now-90*86400;
   const hash=await telemetryHash(data.token);
   if(url.pathname==='/api/telemetry/start'){
-   if(data.consent!==true||!['v16','v17','v18'].includes(data.version)||!['ithaca','aegean','trial','wrath'].includes(data.difficulty)||!SOURCES.includes(data.source)||typeof data.isTest!=='boolean')return telemetryJson({error:'Invalid consent or metadata'},400);
+   const mode=data.mode??'normal';
+   if(data.consent!==true||!['v16','v17','v18','v19'].includes(data.version)||!MODES.includes(mode)||!['ithaca','aegean','trial','wrath'].includes(data.difficulty)||!SOURCES.includes(data.source)||typeof data.isTest!=='boolean')return telemetryJson({error:'Invalid consent or metadata'},400);
    await db.batch([
     db.prepare('DELETE FROM play_events WHERE received_at < ?').bind(cutoff),
     db.prepare('DELETE FROM play_sessions WHERE started_at < ?').bind(cutoff),
-    db.prepare('INSERT INTO play_sessions (id,token_hash,started_at,version,difficulty,source,is_test,consent_version) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(data.id,hash,now,data.version,data.difficulty,data.source,Number(data.isTest),'2026-09-30')
+    db.prepare('INSERT INTO play_sessions (id,token_hash,started_at,version,difficulty,source,is_test,consent_version,mode) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING').bind(data.id,hash,now,data.version,data.difficulty,data.source,Number(data.isTest),'2026-09-30',mode)
    ]);
    const row=await db.prepare('SELECT token_hash FROM play_sessions WHERE id=?').bind(data.id).first();
    if(row?.token_hash!==hash)return telemetryJson({error:'Journey conflict'},403);
