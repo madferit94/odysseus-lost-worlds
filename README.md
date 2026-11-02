@@ -77,6 +77,13 @@ This repository contains the browser game and server source. **Online rankings, 
 
 For development checks, use Node.js 24 or later in the game folder: `npm test` (game, display, server and analytics checks; no install needed) and `node build.mjs`. `.openai/hosting.json` identifies the existing Sites project. Deployments from another account need their own project and database setup.
 
+## Balance simulation
+
+To see where the game is hard without enough real player data, bots played the real game code 4,800 times (4 difficulties × expert, average and novice bots plus three comparison bots, 200 runs each).
+Expert and average bots finished every run on every difficulty; the novice bot finished 39% of runs on Poseidon's Wrath (extreme), and 98% of all failed runs ended in the first three fights (Cyclops Ruins, Polyphemus, Poseidon).
+Bots are not people: their skill levels are guesses, so use the numbers to compare stages and difficulties, not to predict how many players will finish.
+Full tables, how the bots work and how to rerun it: [balance report](odysseus-lost-worlds/analysis/autoplay/results/REPORT.md).
+
 ## Current limitations
 
 - The live game (v16) still has one online leaderboard for all difficulties. From v18 (repository only, not deployed yet), each difficulty has its own leaderboard; results with no recorded difficulty (saved before v18, or started from a page opened before the update) are listed separately as “Earlier records”.
