@@ -67,8 +67,8 @@ function build(S, L) {
   if (worstBoss.length) { const [s, d, b, x] = worstBoss[0]; f.push(t(`**Deadliest boss:** ${bossName(b)} for ${skillName(s)} bots on ${diffName(d)}: ${ci(x.deathPerAttempt)} of lives that entered the fight were lost there (${x.deaths} of ${x.attempts}).`,
     `**가장 위험한 보스:** ${diffName(d)}의 ${skillName(s)} 봇에게 ${bossName(b)}. 전투에 들어간 목숨의 ${ci(x.deathPerAttempt)}를 잃었습니다(${x.attempts}번 중 ${x.deaths}번).`)); }
   const ex = main.includes('expert') ? D.map(d => cell(d, 'expert').damagePerRun) : [];
-  if (ex.length) f.push(t(`**Expert bots lose almost no HP** (${ex.map(x => num(x)).join(' / ')} HP per whole journey on ${D.map(diffName).join(' / ')}), mainly because holding S toward a boss blocks every boss attack, including area attacks such as water bombs and arrow rain.`,
-    `**숙련 봇은 HP를 거의 잃지 않습니다** (${D.map(diffName).join(' / ')}에서 한 판 전체 ${ex.map(x => num(x)).join(' / ')} HP). 보스를 향해 S를 누르고 있으면 물폭탄·화살비 같은 범위 공격까지 포함해 보스 공격이 모두 막히기 때문입니다.`));
+  if (ex.length) f.push(t(`**Expert bots lose almost no HP** (${ex.map(x => num(x)).join(' / ')} HP per whole journey on ${D.map(diffName).join(' / ')}). They hold S toward bosses, which blocks every boss attack including water bombs and arrow rain, and they fire a finisher whenever a boss or a group is in reach.`,
+    `**숙련 봇은 HP를 거의 잃지 않습니다** (${D.map(diffName).join(' / ')}에서 한 판 전체 ${ex.map(x => num(x)).join(' / ')} HP). 보스를 향해 S를 눌러 물폭탄·화살비까지 포함한 모든 보스 공격을 막고, 보스나 무리가 닿으면 곧바로 필살기를 쓰기 때문입니다.`));
   if (skills.includes('mash') && skills.includes('novice')) {
     const m = D.map(d => cell(d, 'mash').clearRate.p), n = D.map(d => cell(d, 'novice').clearRate.p);
     if (D.some((_, i) => m[i] > n[i])) f.push(t(`**A bot that never dodges at all cleared more often than the novice bot** on ${D.filter((_, i) => m[i] > n[i]).map(diffName).join(', ')} (${D.map((d, i) => m[i] > n[i] ? `${pct(m[i])} vs ${pct(n[i])}` : null).filter(Boolean).join(', ')}). Killing fast and stealing life seems to protect more than late, half-hearted dodging and wandering.`,
