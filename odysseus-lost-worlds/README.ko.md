@@ -22,6 +22,7 @@
 | `export-analytics.mjs` | 운영자 전용 도구. 기록 사본을 CSV 파일로 만듭니다 |
 | `admin-remove-run.mjs` | 운영자 전용 도구. 순위 기록을 찾아 지웁니다 |
 | `test-game.cjs`, `test-*.mjs` | 자동 검사 |
+| `analysis/autoplay/` | 밸런스 시뮬레이션. 봇이 실제 게임을 수천 번 플레이하며, 결과와 쉬운 설명은 `analysis/autoplay/results/REPORT.ko.md`에 있습니다 |
 | `build.mjs` | 배포용 게임과 서버를 `dist/`에 묶습니다 |
 | `TELEMETRY-v16.ko.md` | 선택형 플레이 기록의 수집 항목과 운영자 내보내기 방법 |
 
