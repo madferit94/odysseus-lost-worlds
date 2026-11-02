@@ -2,6 +2,10 @@ import {telemetryApi} from './telemetry.mjs';
 import {checkNickname} from './nickname.mjs';
 import {checkClock,checkPlausibility,clientAddress,rateLimit,rateLimitedResponse,purgeUnsubmittedRuns} from './protection.mjs';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+// v18: each ranking entry belongs to the difficulty its journey was started with.
+// Runs saved before v18 have no difficulty (NULL) and are listed as 'legacy'.
+export const RANK_DIFFICULTIES=Object.freeze(['ithaca','aegean','trial','wrath']);
+const RANK_BOARDS=[...RANK_DIFFICULTIES,'legacy'];
 function database(env){if(!env.DB)throw Error('Leaderboard database unavailable');return env.DB;}
 export function scoreRun(r){
  const combat=r.normalKills*100+r.bossKills*1200;
@@ -49,13 +53,26 @@ async function apiWithViewer(request,env,viewerKey){
    const row=await db.prepare('SELECT COUNT(*) AS views FROM page_views').first();return json({views:row.views,since:'2026-09-11'});
   }
   if(path==='/api/leaderboard'&&request.method==='GET'){
-   const rows=await db.prepare('WITH ranked AS (SELECT nickname,score,elapsed,retries,submitted_at,player_key,ROW_NUMBER() OVER (ORDER BY score DESC,elapsed ASC,submitted_at ASC,id ASC) AS rank FROM runs WHERE submitted_at IS NOT NULL) SELECT nickname,score,elapsed,retries,submitted_at,rank,CASE WHEN player_key=? THEN 1 ELSE 0 END AS is_me FROM ranked WHERE rank<=20 OR rank=(SELECT MIN(rank) FROM ranked WHERE player_key=?) ORDER BY rank').bind(viewerKey,viewerKey).all();
-   const all=rows.results||[];return json({entries:all.filter(r=>r.rank<=20),myBest:all.find(r=>r.is_me)||null});
+   // ?difficulty=ithaca|aegean|trial|wrath|legacy picks one board. Without the
+   // parameter (pages from before v18) the reply is the old combined ranking.
+   const board=url.searchParams.get('difficulty');
+   if(board!==null&&!RANK_BOARDS.includes(board))return json({error:'Unknown difficulty.',code:'invalid_difficulty'},400);
+   const filter=board===null?'':board==='legacy'?' AND difficulty IS NULL':' AND difficulty=?';
+   const args=board===null||board==='legacy'?[viewerKey,viewerKey]:[board,viewerKey,viewerKey];
+   const rows=await db.prepare('WITH ranked AS (SELECT nickname,score,elapsed,retries,submitted_at,difficulty,player_key,ROW_NUMBER() OVER (ORDER BY score DESC,elapsed ASC,submitted_at ASC,id ASC) AS rank FROM runs WHERE submitted_at IS NOT NULL'+filter+') SELECT nickname,score,elapsed,retries,submitted_at,difficulty,rank,CASE WHEN player_key=? THEN 1 ELSE 0 END AS is_me FROM ranked WHERE rank<=20 OR rank=(SELECT MIN(rank) FROM ranked WHERE player_key=?) ORDER BY rank').bind(...args).all();
+   const all=rows.results||[],entries=all.filter(r=>r.rank<=20),myBest=all.find(r=>r.is_me)||null;
+   return json(board===null?{entries,myBest}:{difficulty:board,entries,myBest});
   }
   if(path==='/api/runs'&&request.method==='POST'){
+   // The difficulty is fixed here, when the journey starts; a result submitted
+   // later cannot change it. Pages from before v18 send no difficulty: those
+   // runs are kept without one (listed with the earlier records).
+   let start=null;try{start=await body(request);}catch{}
+   const difficulty=start?.difficulty??null;
+   if(difficulty!==null&&!RANK_DIFFICULTIES.includes(difficulty))return json({error:'Unknown difficulty. Please reload the game.',code:'invalid_difficulty'},400);
    const id=crypto.randomUUID(),now=Math.floor(Date.now()/1000);
    await purgeUnsubmittedRuns(db,now);
-   await db.prepare('INSERT INTO runs (id,started_at,player_key) VALUES (?,?,?)').bind(id,now,viewerKey).run();return json({runId:id},201);
+   await db.prepare('INSERT INTO runs (id,started_at,player_key,difficulty) VALUES (?,?,?,?)').bind(id,now,viewerKey,difficulty).run();return json({runId:id,difficulty},201);
   }
   if(path==='/api/results'&&request.method==='POST'){
    let r;try{r=await body(request);}catch{return json({error:'The result could not be read.'},400);}
@@ -65,16 +82,17 @@ async function apiWithViewer(request,env,viewerKey){
    const run=await db.prepare('SELECT * FROM runs WHERE id=?').bind(r.runId).first();
    if(!run)return json({error:'Journey not found. Please start a new game.'},404);
    if(run.player_key&&run.player_key!==viewerKey)return json({error:'Submit this journey from the browser where it started.'},403);
-   if(run.submitted_at)return json({score:run.score,alreadySaved:true});
+   if(run.submitted_at)return json({score:run.score,difficulty:run.difficulty,alreadySaved:true});
    const now=Math.floor(Date.now()/1000),age=now-run.started_at;
    if(age>172800)return json({error:'This result did not pass the journey checks.',code:'invalid_result'},400);
    const clock=checkClock(r,age);if(clock)return json({error:clock.error,code:clock.code},clock.status);
    if(!validResult(r,age))return json({error:'This result did not pass the journey checks.',code:'invalid_result'},400);
    const implausible=checkPlausibility(r,age);if(implausible)return json({error:implausible.error,code:implausible.code},implausible.status);
+   // Any difficulty in the submitted body is ignored; the run-start record decides.
    const parts=scoreRun(r);
    const result=await db.prepare('UPDATE runs SET submitted_at=?,nickname=?,score=?,elapsed=?,normal_kills=?,boss_kills=?,damage_taken=?,retries=?,player_key=COALESCE(player_key,?) WHERE id=? AND submitted_at IS NULL').bind(now,nickname,parts.total,r.elapsed,r.normalKills,r.bossKills,r.damageTaken,r.retries,viewerKey,r.runId).run();
-   if(result.meta?.changes===0){const saved=await db.prepare('SELECT score FROM runs WHERE id=?').bind(r.runId).first();return json({score:saved.score,alreadySaved:true});}
-   return json({score:parts.total,breakdown:parts});
+   if(result.meta?.changes===0){const saved=await db.prepare('SELECT score,difficulty FROM runs WHERE id=?').bind(r.runId).first();return json({score:saved.score,difficulty:saved.difficulty,alreadySaved:true});}
+   return json({score:parts.total,breakdown:parts,difficulty:run.difficulty});
   }
   return json({error:'Not found'},404);
  }catch(error){console.error('Leaderboard request failed',error instanceof Error?error.message:'Unknown error');return json({error:path==='/api/views'?'Views are temporarily unavailable. Please try again.':'Rankings are temporarily unavailable. Please try again.'},503);}

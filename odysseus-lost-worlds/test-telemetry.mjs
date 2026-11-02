@@ -13,9 +13,9 @@ function database(){
 }
 const metadata=()=>({id:crypto.randomUUID(),token:crypto.randomUUID()+crypto.randomUUID(),consent:true,version:'v16',difficulty:'ithaca',source:'x',isTest:true});
 
-test('v17 sessions preserve the version; v16 remains compatible and unknown versions are rejected',async()=>{
+test('v18 and v17 sessions preserve the version; v16 remains compatible and unknown versions are rejected',async()=>{
  const {env,sqlite}=database();
- for(const version of ['v16','v17']){const m={...metadata(),version};assert.equal((await api(request('/api/telemetry/start',m),env)).status,201);assert.equal(sqlite.prepare('SELECT version FROM play_sessions WHERE id=?').get(m.id).version,version);}
+ for(const version of ['v16','v17','v18']){const m={...metadata(),version};assert.equal((await api(request('/api/telemetry/start',m),env)).status,201);assert.equal(sqlite.prepare('SELECT version FROM play_sessions WHERE id=?').get(m.id).version,version);}
  assert.equal((await api(request('/api/telemetry/start',{...metadata(),version:'v999'}),env)).status,400);
 });
 test('operator export excludes tests and secrets, flags incomplete journeys, escapes CSV',()=>{
@@ -71,7 +71,7 @@ test('real game hooks cover bosses, retries, two-bar Zeus and game over; rejecte
  assert.equal(rows.filter(e=>e.name==='retry').length,2);assert.equal(rows.filter(e=>e.name==='game_over').length,1);
  assert.equal(rows.filter(e=>e.name==='player_death').length,3);
  assert.equal(f.sqlite.prepare('SELECT difficulty,is_test FROM play_sessions').get().is_test,1);
- assert.equal(f.sqlite.prepare('SELECT version FROM play_sessions').get().version,'v17');
+ assert.equal(f.sqlite.prepare('SELECT version FROM play_sessions').get().version,'v18');
 });
 test('opt-out sends nothing; opting in mid-run waits for restart; language and stop work',async()=>{
  const f=frontend();f.run('reset();');await f.run('telemetry.flush()');assert.equal(f.requests.length,0);
